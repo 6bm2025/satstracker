@@ -7,7 +7,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:system-ui,sans-serif;}</style>
 </head>
 <body>
@@ -25,7 +25,7 @@ const YT={addition:[{label:"Adding large numbers",url:"https://youtu.be/0aypMq0x
 
 const SUPA_URL="https://ghialldqjnnmalskfvur.supabase.co";
 const SUPA_KEY="sb_publishable_7Q9EJJVvLlanDc6NMkc2Xg_dQtAwpzm";
-const sb=(window.supabase||supabase).createClient(SUPA_URL,SUPA_KEY);
+const sb=window.supabase.createClient(SUPA_URL,SUPA_KEY);
 
 async function load(key,fallback){try{const v=localStorage.getItem(key);return v?JSON.parse(v):fallback;}catch(e){return fallback;}}
 async function save(key,val){try{localStorage.setItem(key,JSON.stringify(val));}catch(e){}}
