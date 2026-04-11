@@ -1,0 +1,2242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>KS2 SATs Arithmetic Tracker</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+<style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:system-ui,sans-serif;}</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useRef, useCallback } = React;
+
+const C={primary:"#4f46e5",primaryD:"#3730a3",primaryL:"#e0e7ff",green:"#16a34a",greenL:"#dcfce7",yellow:"#d97706",yellowL:"#fef3c7",red:"#dc2626",redL:"#fee2e2",gray:"#6b7280",grayL:"#f3f4f6",white:"#ffffff",text:"#111827",textM:"#374151",textL:"#6b7280",satsBlue:"#1a56a0",satsMark:"#c8d8f0"};
+const CAT_COLOURS=[{bg:"#fef3c7",border:"#f59e0b",text:"#92400e",heading:"#b45309"},{bg:"#fce7f3",border:"#ec4899",text:"#831843",heading:"#be185d"},{bg:"#d1fae5",border:"#10b981",text:"#064e3b",heading:"#047857"},{bg:"#ede9fe",border:"#8b5cf6",text:"#4c1d95",heading:"#6d28d9"},{bg:"#dbeafe",border:"#3b82f6",text:"#1e3a8a",heading:"#1d4ed8"},{bg:"#ffedd5",border:"#f97316",text:"#7c2d12",heading:"#c2410c"}];
+const TOPIC_EMOJI={addition:"➕","place-value":"🔢","missing-add":"❓",subtraction:"➖","sub-decimal":"🔸","missing-sub":"❓","multiply-three":"✖️","multiply-powers":"🚀","short-multiplication":"✖️","long-multiplication":"📝","divide-powers":"🔻","short-division":"➗","missing-div":"❓","long-division":"📋","division-remainder":"♾️","fractions-add":"½","fractions-add-mixed":"🔀","fractions-subtract":"⬇️","fractions-subtract-mixed":"⬇️","fractions-multiply":"✖️","fractions-divide":"➗","decimals-add":"🔹","decimals-subtract":"🔹","decimals-multiply":"🔹",percentage:"%",bidmas:"🧮",indices:"²"};
+const TOPIC_NAMES={addition:"Addition","place-value":"Place Value","missing-add":"Missing Number (Add)","missing-sub":"Missing Number (Sub)","missing-div":"Missing Number (Div)",subtraction:"Subtraction","sub-decimal":"Subtracting Decimals from Integers","multiply-three":"Multiplying 3 Numbers","multiply-powers":"Multiply by 10/100/1000","divide-powers":"Divide by 10/100/1000","short-multiplication":"Short Multiplication","long-multiplication":"Long Multiplication","short-division":"Short Division","long-division":"Long Division","division-remainder":"Division with Remainder","fractions-add":"Adding Fractions","fractions-add-mixed":"Adding Mixed Numbers","fractions-subtract":"Subtracting Fractions","fractions-subtract-mixed":"Subtracting Mixed Numbers","fractions-multiply":"Fractions of an Amount","fractions-divide":"Dividing Fractions","decimals-add":"Adding Decimals","decimals-subtract":"Subtracting Decimals","decimals-multiply":"Multiplying Decimals",percentage:"Percentage of an Amount",bidmas:"Order of Operations (BIDMAS)",indices:"Powers & Indices"};
+const TOPIC_CATEGORIES=[{label:"Addition & Subtraction",topics:["addition","place-value","missing-add","subtraction","sub-decimal","missing-sub"]},{label:"Multiplication",topics:["multiply-three","multiply-powers","short-multiplication","long-multiplication"]},{label:"Division",topics:["divide-powers","short-division","missing-div","long-division","division-remainder"]},{label:"Fractions",topics:["fractions-add","fractions-add-mixed","fractions-subtract","fractions-subtract-mixed","fractions-multiply","fractions-divide"]},{label:"Decimals",topics:["decimals-add","decimals-subtract","decimals-multiply"]},{label:"Percentages & BIDMAS",topics:["percentage","bidmas","indices"]}];
+const TWO_MARK=new Set(["long-multiplication","long-division","long-multiplication-4d","long-division-4d"]);
+const YT={addition:[{label:"Adding large numbers",url:"https://youtu.be/0aypMq0xtJA"}],subtraction:[{label:"Subtracting whole numbers",url:"https://youtu.be/u5TrnXczeag"}],"short-multiplication":[{label:"Short multiplication",url:"https://youtu.be/yEDoC8sUdxk"}],"long-multiplication":[{label:"Long multiplication",url:"https://youtu.be/oyG9EZzHWbg"}],"long-multiplication-4d":[{label:"Long multiplication",url:"https://youtu.be/oyG9EZzHWbg"}],"short-division":[{label:"Short division",url:"https://youtu.be/SLze82Zcc4Y"}],"long-division":[{label:"Long division",url:"https://youtu.be/UNwr1BDeunA"}],"long-division-4d":[{label:"Long division",url:"https://youtu.be/UNwr1BDeunA"}],"multiply-powers":[{label:"Multiplying by 10/100/1000",url:"https://youtu.be/niMiajTassU"}],"divide-powers":[{label:"Dividing by 10/100/1000",url:"https://youtu.be/niMiajTassU"}],"fractions-add":[{label:"Adding fractions",url:"https://youtu.be/pYEI-QUYLYs"}],"fractions-add-mixed":[{label:"Adding mixed numbers",url:"https://youtu.be/NjO0B0AcYS0"}],"fractions-subtract":[{label:"Subtracting fractions",url:"https://youtu.be/Fv88Yx5GyVI"}],"fractions-subtract-mixed":[{label:"Subtracting mixed numbers",url:"https://youtu.be/Fv88Yx5GyVI"}],"fractions-multiply":[{label:"Fractions of amounts",url:"https://youtu.be/QldmM73tLX4"}],"fractions-divide":[{label:"Dividing a fraction",url:"https://youtu.be/H4e3mNkVUQo"}],"decimals-add":[{label:"Adding decimals",url:"https://youtu.be/uikq-0TRK-4"}],"decimals-subtract":[{label:"Subtracting decimals",url:"https://youtu.be/a8tCGNB-vOk"}],"decimals-multiply":[{label:"Multiplying decimals",url:"https://youtu.be/Dm028SSei88"}],percentage:[{label:"Percentages",url:"https://youtu.be/kfBaaZdynBU"}],bidmas:[{label:"BIDMAS",url:"https://youtu.be/VZqnqzfmnwE"}],indices:[{label:"Powers & Indices",url:"https://youtu.be/VZqnqzfmnwE"}],"multiply-three":[{label:"Multiplying 3 numbers",url:"https://youtu.be/niMiajTassU"}],"place-value":[],"missing-add":[],"missing-sub":[],"missing-div":[],"sub-decimal":[{label:"Subtracting decimals from whole numbers",url:"https://youtu.be/t3oPWzssnQ8"}],"division-remainder":[]};
+
+async function load(key,fallback){try{const v=localStorage.getItem(key);return v?JSON.parse(v):fallback;}catch(e){return fallback;}}
+async function save(key,val){try{localStorage.setItem(key,JSON.stringify(val));}catch(e){}}
+
+const gcd=(a,b)=>b===0?a:gcd(b,a%b);
+const simplify=(n,d)=>{const g=gcd(Math.abs(n),Math.abs(d));return[n/g,d/g];};
+const rnd=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const pick=arr=>arr[Math.floor(Math.random()*arr.length)];
+const PRIMES=[11,13,17,19,23,29,31,37,41,43,47];
+const COMPOSITES=[12,14,15,16,18,21,22,24,25,26,28];
+const todayStr=()=>{const d=new Date();return String(d.getDate()).padStart(2,"0")+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+String(d.getFullYear()).slice(-2);};
+const isoToday=()=>new Date().toISOString().slice(0,10);
+const daysSince=iso=>{if(!iso)return null;const d=Math.floor((new Date()-new Date(iso))/(1000*60*60*24));return d;};
+const lastLoginLabel=iso=>{if(!iso)return"Never";const d=daysSince(iso);if(d===0)return"Today";if(d===1)return"Yesterday";return d+" days ago";};
+const getTopicPct=a=>{if(!a||!a.length)return null;const l=a.slice(-10);return Math.round(l.reduce((s,v)=>s+v,0)/l.length*100);};
+const pctColor=p=>p>=70?C.green:p>=50?C.yellow:C.red;
+
+// Mastery thresholds (per your spec)
+function masteryLabel(pct){
+  if(pct===null)return null;
+  if(pct>=90)return{label:"Mastered",bg:"#15803d",text:"#ffffff",border:"#15803d"};
+  if(pct>=76)return{label:"Competent",bg:"#86efac",text:"#14532d",border:"#86efac"};
+  if(pct>=51)return{label:"Developing",bg:"#fed7aa",text:"#9a3412",border:"#fed7aa"};
+  return{label:"Needs Support",bg:"#fca5a5",text:"#7f1d1d",border:"#fca5a5"};
+}
+function MasteryBadge({pct}){
+  const m=masteryLabel(pct);
+  if(!m)return<span style={{color:C.textL,fontSize:11}}>—</span>;
+  return<span style={{background:m.bg,color:m.text,border:"1px solid "+m.border,borderRadius:6,padding:"2px 8px",fontSize:11,fontWeight:700,whiteSpace:"nowrap"}}>{m.label}</span>;
+}
+
+// Streak helpers
+function getStreakCount(practiseDates,streakSettings){
+  if(!streakSettings||!streakSettings.active||!streakSettings.startDate||!streakSettings.endDate)return null;
+  if(!practiseDates||!practiseDates.length)return 0;
+  const start=new Date(streakSettings.startDate);
+  const end=new Date(streakSettings.endDate);
+  const today=new Date(isoToday());
+  const effectiveEnd=end<today?end:today;
+  let count=0;
+  const d=new Date(start);
+  while(d<=effectiveEnd){
+    const iso=d.toISOString().slice(0,10);
+    if(practiseDates.includes(iso))count++;
+    d.setDate(d.getDate()+1);
+  }
+  return count;
+}
+
+// ── Fraction equality ─────────────────────────────────────────────────────────
+function parseFracStr(s){
+  s=s.trim().replace(/,/g,"");
+  const mx=s.match(/^(\d+)\s+(\d+)\/(\d+)$/);if(mx)return{w:+mx[1],n:+mx[2],d:+mx[3]};
+  const fx=s.match(/^(\d+)\/(\d+)$/);if(fx)return{w:0,n:+fx[1],d:+fx[2]};
+  const wx=s.match(/^(\d+(?:\.\d+)?)$/);if(wx)return{w:+wx[1],n:0,d:1};
+  return null;
+}
+function fractionsEqual(ua,ca){
+  const a=parseFracStr(ua),b=parseFracStr(ca);if(!a||!b)return false;
+  const na=a.w*a.d+a.n,nb=b.w*b.d+b.n;
+  const ga=gcd(Math.abs(na),Math.abs(a.d)),gb=gcd(Math.abs(nb),Math.abs(b.d));
+  return(na/ga===nb/gb)&&(a.d/ga===b.d/gb);
+}
+function answersMatch(ua,ca,isText){
+  const u=ua.trim().replace(/,/g,"");const c=String(ca).trim().replace(/,/g,"");
+  if(u.replace(/\s/g,"")=== c.replace(/\s/g,""))return true;
+  if(isText&&fractionsEqual(u,c))return true;
+  if(!isNaN(parseFloat(u))&&!isNaN(parseFloat(c))&&Math.abs(parseFloat(u)-parseFloat(c))<0.001)return true;
+  return false;
+}
+
+// ── Fraction rendering ────────────────────────────────────────────────────────
+function Frac({n,d,size}){
+  return(
+    <span style={{display:"inline-flex",flexDirection:"column",alignItems:"center",verticalAlign:"middle",margin:"0 3px",fontSize:size||"1em",lineHeight:1}}>
+      <span style={{borderBottom:"1.5px solid currentColor",paddingBottom:"1px",textAlign:"center",minWidth:"1em"}}>{n}</span>
+      <span style={{paddingTop:"1px",textAlign:"center",minWidth:"1em"}}>{d}</span>
+    </span>
+  );
+}
+function renderMath(text,size){
+  if(!text||typeof text!=="string")return text;
+  const parts=[];const re=/(\d+)\s+(\d+)\/(\d+)|(\d+)\/(\d+)/g;let last=0,m;
+  while((m=re.exec(text))!==null){
+    if(m.index>last)parts.push(text.slice(last,m.index));
+    if(m[1]!==undefined){parts.push(<span key={m.index} style={{display:"inline-flex",alignItems:"center",gap:"2px"}}><span>{m[1]}</span><Frac n={m[2]} d={m[3]} size={size}/></span>);}
+    else{parts.push(<Frac key={m.index} n={m[4]} d={m[5]} size={size}/>);}
+    last=m.index+m[0].length;
+  }
+  if(last<text.length)parts.push(text.slice(last));
+  return parts.length?parts:text;
+}
+
+// ── Question generator ────────────────────────────────────────────────────────
+function genQ(topic,usedKeys){
+  const used=usedKeys||new Set();
+  let attempts=0;
+  while(attempts<20){
+    attempts++;
+    try{
+      let q=null;
+      switch(topic){
+        case"addition":{
+          const variants=[
+            ()=>{const a=rnd(100,999),b=rnd(10,99);return{q:a.toLocaleString()+" + "+b+" =",a:a+b,k:a,na:a,nb:b,dh:a.toLocaleString()+" + "+b+"\n= "+(a+b).toLocaleString()};},
+            ()=>{const a=rnd(1000,9999),b=rnd(100,999);return{q:a.toLocaleString()+" + "+b.toLocaleString()+" =",a:a+b,k:a,na:a,nb:b,dh:a.toLocaleString()+" + "+b.toLocaleString()+"\n= "+(a+b).toLocaleString()};},
+            ()=>{const a=rnd(10000,99999),b=rnd(1000,9999);return{q:a.toLocaleString()+" + "+b.toLocaleString()+" =",a:a+b,k:a,na:a,nb:b,dh:a.toLocaleString()+" + "+b.toLocaleString()+"\n= "+(a+b).toLocaleString()};}
+          ];
+          const r=pick(variants)();q={question:r.q,answer:r.a,leftBox:false,topic,keyNum:r.k,colHint:{type:"colAdd",nums:[r.na,r.nb],answer:r.a},dynamicHint:r.dh};break;}
+        case"place-value":{
+          const T=rnd(1,9),H=rnd(1,9),t=rnd(1,9),o=rnd(1,9),n=T*1000+H*100+t*10+o,mv=pick(["h","t","o"]);
+          let qstr,ans;
+          if(mv==="h"){qstr=n.toLocaleString()+" = "+T+",000 + ___ + "+t+"0 + "+o;ans=H*100;}
+          else if(mv==="t"){qstr=n.toLocaleString()+" = "+T+",000 + "+H+"00 + ___ + "+o;ans=t*10;}
+          else{qstr=n.toLocaleString()+" = "+T+",000 + "+H+"00 + "+t+"0 + ___";ans=o;}
+          q={question:qstr,answer:ans,leftBox:false,topic,keyNum:n,dynamicHint:n.toLocaleString()+" = "+T+",000 + "+H+"00 + "+t+"0 + "+o,pvHint:{num:n,missingPos:mv}};break;}
+        case"missing-add":{const b=rnd(10,99),a=rnd(100,999),s=a+b;q=pick([{question:"___ + "+b+" = "+s,answer:a,leftBox:false,topic,keyNum:s,dynamicHint:s+" - "+b+" = "+a},{question:a+" + ___ = "+s,answer:b,leftBox:false,topic,keyNum:s,dynamicHint:s+" - "+a+" = "+b}]);break;}
+        case"subtraction":{
+          const variants=[
+            ()=>{const a=rnd(1000,9999),b=rnd(100,a-1);return{q:a.toLocaleString()+" - "+b.toLocaleString()+" =",a:a-b,k:a,na:a,nb:b,dh:a.toLocaleString()+" - "+b.toLocaleString()+"\n= "+(a-b).toLocaleString()};},
+            ()=>{const a=rnd(10000,99999),b=rnd(1000,a-1);return{q:a.toLocaleString()+" - "+b.toLocaleString()+" =",a:a-b,k:a,na:a,nb:b,dh:a.toLocaleString()+" - "+b.toLocaleString()+"\n= "+(a-b).toLocaleString()};}
+          ];
+          const r=pick(variants)();q={question:r.q,answer:r.a,leftBox:false,topic,keyNum:r.k,colHint:{type:"colSub",top:r.na,bot:r.nb,answer:r.a},dynamicHint:r.dh};break;}
+        case"sub-decimal":{const a=rnd(10,99),b=parseFloat((rnd(1,9)+rnd(1,9)/10).toFixed(1));q={question:a+" - "+b+" =",answer:parseFloat((a-b).toFixed(1)),leftBox:false,topic,keyNum:a,dynamicHint:a+".0 - "+b+"\n= "+parseFloat((a-b).toFixed(1)),decHint:{top:a,bot:b,answer:parseFloat((a-b).toFixed(1))}};break;}
+        case"missing-sub":{const a=rnd(100,999),b=rnd(10,a-10),d=a-b;q=pick([{question:a+" - ___ = "+d,answer:b,leftBox:false,topic,keyNum:a,dynamicHint:a+" - "+d+" = "+b},{question:"___ - "+b+" = "+d,answer:a,leftBox:false,topic,keyNum:a,dynamicHint:d+" + "+b+" = "+a}]);break;}
+        case"multiply-three":{
+          const pairs=[[2,4],[2,5],[3,4],[3,5],[4,5],[2,6],[3,6]];const pair=pick(pairs);const x=pair[0],y=pair[1],z=rnd(2,9);
+          q={question:x+" × "+y+" × "+z+" =",answer:x*y*z,leftBox:false,topic,keyNum:x*y*z,dynamicHint:"Step 1: "+x+" × "+y+" = "+(x*y)+"\nStep 2: "+(x*y)+" × "+z+" = "+(x*y*z)};break;}
+        case"multiply-powers":{
+          const p=pick([10,100,1000]);
+          const useDecimal=p>=100&&Math.random()<0.5;
+          const n=useDecimal?parseFloat((rnd(1,9)+rnd(1,9)/10).toFixed(1)):rnd(2,99);
+          const ans=parseFloat((n*p).toFixed(2));
+          const shift=Math.log10(p);
+          q={question:n+" × "+p+" =",answer:ans,leftBox:false,topic,keyNum:Math.round(n*10),dynamicHint:n+" × "+p+"\nMove digits "+Math.abs(shift)+" place"+(Math.abs(shift)>1?"s":"")+" left\n= "+ans,pvGridHint:{before:n,after:ans,shift:shift}};break;}
+        case"divide-powers":{
+          const p=pick([10,100,1000]),a=rnd(1,99);
+          const top=a*p;const ans=parseFloat((a).toFixed(3));
+          const shift=-Math.log10(p);
+          q={question:top.toLocaleString()+" ÷ "+p+" =",answer:ans,leftBox:false,topic,keyNum:top,dynamicHint:top+" ÷ "+p+"\nMove digits "+shift+" place"+(shift>1?"s":"")+" right\n= "+ans,pvGridHint:{before:top,after:ans,shift:shift}};break;}
+        case"short-multiplication":{
+          const mv=rnd(2,9),a=rnd(100,999),ans=a*mv;
+          q={question:a.toLocaleString()+" × "+mv+" =",answer:ans,leftBox:false,topic,keyNum:a,colHint:{type:"shortMult",top:a,mult:mv,answer:ans},dynamicHint:"  "+a+"\n× "+mv+"\n"+"─".repeat(5)+"\n= "+ans.toLocaleString()};break;}
+        case"long-multiplication":{
+          const a=rnd(100,999),b=rnd(12,99),ans=a*b;
+          const tD=Math.floor(b/10),oD=b%10,s1=a*oD,s2=a*tD*10;
+          const working=a.toLocaleString()+" × "+b+":\n"+a+" × "+oD+" = "+s1.toLocaleString()+"\n"+a+" × "+(tD*10)+" = "+s2.toLocaleString()+"\nTotal = "+ans.toLocaleString();
+          q={question:a.toLocaleString()+" × "+b,answer:ans,leftBox:false,topic,isTwoMark:true,working,colHint:{type:"longMult",a,b,partial1:s1,partial2:s2,answer:ans},dynamicHint:working,keyNum:a};break;}
+        case"long-multiplication-4d":{
+          const a=rnd(1000,9999),b=rnd(12,99),ans=a*b;
+          const tD=Math.floor(b/10),oD=b%10,s1=a*oD,s2=a*tD*10;
+          const working=a.toLocaleString()+" × "+b+":\n"+a.toLocaleString()+" × "+oD+" = "+s1.toLocaleString()+"\n"+a.toLocaleString()+" × "+(tD*10)+" = "+s2.toLocaleString()+"\nTotal = "+ans.toLocaleString();
+          q={question:a.toLocaleString()+" × "+b,answer:ans,leftBox:false,topic:"long-multiplication",isTwoMark:true,working,colHint:{type:"longMult",a,b,partial1:s1,partial2:s2,answer:ans},dynamicHint:working,keyNum:a};break;}
+        case"short-division":{
+          const dv=rnd(2,9),a=rnd(10,99),n=dv*a;
+          q={question:n+" ÷ "+dv+" =",answer:a,leftBox:false,topic,keyNum:n,sdHint:{dividend:n,divisor:dv,answer:a},dynamicHint:n+" ÷ "+dv+"\n= "+a};break;}
+        case"missing-div":{const dv=rnd(2,12),a=rnd(2,12),n=dv*a;q=pick([{question:n+" ÷ ___ = "+a,answer:dv,leftBox:false,topic,keyNum:n,dynamicHint:n+" ÷ "+a+" = "+dv},{question:"___ ÷ "+dv+" = "+a,answer:n,leftBox:false,topic,keyNum:n,dynamicHint:a+" × "+dv+" = "+n}]);break;}
+        case"long-division":{
+          const dv=Math.random()<0.5?pick(PRIMES):pick(COMPOSITES),a=rnd(10,99),n=dv*a;
+          const working=n+" ÷ "+dv+":\nEstimate: "+dv+" × "+Math.floor(a/10)*10+" = "+(dv*Math.floor(a/10)*10)+"\nRefine to get "+a+"\nAnswer = "+a;
+          q={question:n+" ÷ "+dv,answer:a,leftBox:false,topic,isTwoMark:true,working,divHint:{dividend:n,divisor:dv},dynamicHint:working,keyNum:n};break;}
+        case"long-division-4d":{
+          const dv=Math.random()<0.5?pick(PRIMES):pick(COMPOSITES),a=rnd(100,999),n=dv*a;
+          const working=n.toLocaleString()+" ÷ "+dv+":\nEstimate multiples of "+dv+"\nAnswer = "+a;
+          q={question:n.toLocaleString()+" ÷ "+dv,answer:a,leftBox:false,topic:"long-division",isTwoMark:true,working,divHint:{dividend:n,divisor:dv},dynamicHint:working,keyNum:n};break;}
+        case"division-remainder":{const dv=rnd(2,9),a=rnd(10,99),r=rnd(1,dv-1),n=dv*a+r;q={question:n+" ÷ "+dv+" =",answer:parseFloat((n/dv).toFixed(1)),leftBox:false,topic,keyNum:n,divHint:{dividend:n,divisor:dv},dynamicHint:n+" ÷ "+dv+" = "+a+" remainder "+r+"\n= "+parseFloat((n/dv).toFixed(1))};break;}
+        case"fractions-add":{
+          const d1=pick([3,4,5,6,8,10]),opts=[3,4,5,6,8,10].filter(x=>x!==d1),d2=pick(opts),n1=rnd(1,d1-1),n2=rnd(1,d2-1);
+          const lcd=d1*d2/gcd(d1,d2),m1=lcd/d1,m2=lcd/d2,nt=n1*m1+n2*m2;
+          const sn=simplify(nt,lcd);
+          const ans=sn[1]===1?String(sn[0]):sn[0]>sn[1]?Math.floor(sn[0]/sn[1])+" "+(sn[0]%sn[1])+"/"+sn[1]:sn[0]+"/"+sn[1];
+          const dh=n1+"/"+d1+" + "+n2+"/"+d2+"\nCommon denominator = "+lcd+"\n= "+(n1*m1)+"/"+lcd+" + "+(n2*m2)+"/"+lcd+"\n= "+nt+"/"+lcd+(sn[0]!==nt||sn[1]!==lcd?" = "+ans:"");
+          q={question:n1+"/"+d1+" + "+n2+"/"+d2+" =",answer:ans,leftBox:false,topic,isText:true,keyNum:d1*10+d2,dynamicHint:dh,fracAddHint:{n1,d1,n2,d2}};break;}
+        case"fractions-add-mixed":{
+          const d=pick([3,4,5,6,8]),w1=rnd(1,4),w2=rnd(1,4),n1=rnd(1,d-1),n2=rnd(1,d-1);
+          let tN=n1+n2,tW=w1+w2;if(tN>=d){tW+=Math.floor(tN/d);tN=tN%d;}
+          const ans=tN===0?String(tW):tW+" "+tN+"/"+d;
+          const dh="Wholes: "+w1+" + "+w2+" = "+(w1+w2)+"\nFractions: "+n1+"/"+d+" + "+n2+"/"+d+" = "+(n1+n2)+"/"+d+(n1+n2>=d?" = 1 "+(n1+n2-d)+"/"+d+" (carry 1)":"")+"\nAnswer = "+ans;
+          q={question:w1+" "+n1+"/"+d+" + "+w2+" "+n2+"/"+d+" =",answer:ans,leftBox:false,topic,isText:true,keyNum:d*10+w1,dynamicHint:dh,fracMixedHint:{w1,n1,d1:d,w2,n2,d2:d}};break;}
+        case"fractions-subtract":{
+          const d=pick([5,6,8,9,10,12]),n1=rnd(2,d-1),n2=rnd(1,n1-1);
+          const s=simplify(n1-n2,d);const ans=s[0]+"/"+s[1];
+          const dh=n1+"/"+d+" - "+n2+"/"+d+" = "+(n1-n2)+"/"+d+(s[0]!==n1-n2||s[1]!==d?" = "+ans+" (simplified)":"");
+          q={question:n1+"/"+d+" - "+n2+"/"+d+" =",answer:ans,leftBox:false,topic,isText:true,keyNum:d*10+n1,dynamicHint:dh,fracSubHint:{n1,d1:d,n2,d2:d}};break;}
+        case"fractions-subtract-mixed":{
+          const d=pick([4,5,6,8]),w1=rnd(2,5),n1=rnd(1,d-1),w2=rnd(1,w1-1),n2=rnd(1,d-1);
+          let rn=n1-n2,rw=w1-w2;let borrowed=false;
+          if(rn<0){rw--;rn+=d;borrowed=true;}
+          const s=simplify(rn,d);
+          const ans=rn===0?String(rw):(rw===0?s[0]+"/"+s[1]:rw+" "+s[0]+"/"+s[1]);
+          let dh=w1+" "+n1+"/"+d+" - "+w2+" "+n2+"/"+d;
+          if(borrowed)dh+="\nBorrow 1 from "+w1+": becomes "+(w1-1)+" "+(n1+d)+"/"+d+"\n"+(w1-1)+" "+(n1+d)+"/"+d+" - "+w2+" "+n2+"/"+d;
+          dh+="\n= "+ans;
+          q={question:w1+" "+n1+"/"+d+" - "+w2+" "+n2+"/"+d+" =",answer:ans,leftBox:false,topic,isText:true,keyNum:d*10+w1,dynamicHint:dh,fracSubMixedHint:{w1,n1,d,w2,n2,borrowed}};break;}
+        case"fractions-multiply":{
+          const d=pick([3,4,5,6,8,10]),n=rnd(1,d-1),w=rnd(2,10)*d;
+          q={question:n+"/"+d+" of "+w+" =",answer:n*w/d,leftBox:false,topic,keyNum:w,dynamicHint:"Step 1: "+w+" ÷ "+d+" = "+(w/d)+"\nStep 2: "+(w/d)+" × "+n+" = "+(n*w/d)};break;}
+        case"fractions-divide":{
+          const d=pick([3,4,5,6,8]),n=rnd(1,d-1),dv=pick([2,3,4]);
+          const s=simplify(n,d*dv);const ans=s[0]+"/"+s[1];
+          q={question:n+"/"+d+" ÷ "+dv+" =",answer:ans,leftBox:false,topic,isText:true,keyNum:d*10+n,dynamicHint:n+"/"+d+" ÷ "+dv+"\nKeep top, multiply bottom: "+n+"/"+(d*dv)+(s[0]!==n||s[1]!==d*dv?" = "+ans+" (simplified)":""),fracDivHint:{n,d,whole:dv,newD:d*dv,simpN:s[0],simpD:s[1]}};break;}
+        case"decimals-add":{
+          const a=parseFloat((rnd(10,99)+rnd(0,9)/10).toFixed(1)),b=parseFloat((rnd(1,20)+rnd(0,9)/10).toFixed(1));
+          q={question:a+" + "+b+" =",answer:parseFloat((a+b).toFixed(1)),leftBox:false,topic,keyNum:Math.round(a*10),dynamicHint:"  "+a+"\n+ "+b+"\n"+"─".repeat(6)+"\n= "+parseFloat((a+b).toFixed(1)),decColHint:{top:a,bot:b,answer:parseFloat((a+b).toFixed(1)),op:"add"}};break;}
+        case"decimals-subtract":{
+          const a=parseFloat((rnd(20,99)+rnd(1,9)/10).toFixed(1)),b=parseFloat((rnd(1,15)+rnd(0,9)/10).toFixed(1));
+          q={question:a+" - "+b+" =",answer:parseFloat((a-b).toFixed(1)),leftBox:false,topic,keyNum:Math.round(a*10),dynamicHint:"  "+a+"\n- "+b+"\n"+"─".repeat(6)+"\n= "+parseFloat((a-b).toFixed(1)),decColHint:{top:a,bot:b,answer:parseFloat((a-b).toFixed(1)),op:"sub"}};break;}
+        case"decimals-multiply":{
+          const a=parseFloat((rnd(1,9)+rnd(1,9)/10).toFixed(1)),b=rnd(2,12);const ans=parseFloat((a*b).toFixed(2));
+          q={question:a+" × "+b+" =",answer:ans,leftBox:false,topic,keyNum:Math.round(a*10),dynamicHint:"Ignore decimal: "+(Math.round(a*10))+" × "+b+" = "+(Math.round(a*10)*b)+"\nCount 1 decimal place → "+ans};break;}
+        case"percentage":{
+          const cfg=pick([{p:10,b:10},{p:20,b:5},{p:25,b:4},{p:50,b:2},{p:30,b:10},{p:40,b:5},{p:75,b:4},{p:5,b:20},{p:15,b:20}]);
+          const w=rnd(1,10)*cfg.b,ans=Math.round(w*cfg.p/100);
+          let m1="Method 1:\n10% of "+w+" = "+(w/10);
+          if(cfg.p===10)m1+="\n= "+ans;
+          else if(cfg.p===5)m1+="\n5% = half of 10% = "+ans;
+          else if(cfg.p===20)m1+="\n20% = 2 × 10% = "+ans;
+          else if(cfg.p===25)m1+="\n25% = 10%+10%+5% = "+ans;
+          else if(cfg.p===50)m1+="\n50% = 5 × 10% = "+ans;
+          else if(cfg.p===30)m1+="\n30% = 3 × 10% = "+ans;
+          else if(cfg.p===40)m1+="\n40% = 4 × 10% = "+ans;
+          else if(cfg.p===75)m1+="\n75% = 50%+25% = "+ans;
+          else if(cfg.p===15)m1+="\n15% = 10%+5% = "+ans;
+          const m2="Method 2:\n"+cfg.p+" × "+w+" = "+(cfg.p*w)+"\n"+(cfg.p*w)+" ÷ 100 = "+ans;
+          let dh=m1+"\n\n"+m2;
+          q={question:cfg.p+"% of "+w+" =",answer:ans,leftBox:false,topic,keyNum:w,dynamicHint:dh};break;}
+        case"bidmas":{
+          const variants=[
+            ()=>{const a=rnd(2,9),b=rnd(2,9),c=rnd(2,9),ans=a+b*c;return{q:a+" + "+b+" × "+c+" =",a:ans,k:b*c,dh:a+" + "+b+" × "+c+"\nMultiply first: "+b+" × "+c+" = "+(b*c)+"\nThen add: "+a+" + "+(b*c)+" = "+ans};},
+            ()=>{const a=rnd(2,9),b=rnd(2,9),c=rnd(2,9),ans=(a+b)*c;return{q:"("+a+" + "+b+") × "+c+" =",a:ans,k:c,dh:"("+a+" + "+b+") × "+c+"\nBrackets first: "+a+"+"+b+" = "+(a+b)+"\nThen multiply: "+(a+b)+" × "+c+" = "+ans};},
+            ()=>{const a=rnd(2,5),b=rnd(1,9),ans=a*a+b;return{q:a+"\u00B2 + "+b+" =",a:ans,k:a,dh:a+"\u00B2 + "+b+"\nIndices first: "+a+"² = "+(a*a)+"\nThen add: "+(a*a)+" + "+b+" = "+ans};},
+            ()=>{const a=rnd(2,12),b=rnd(2,9),c=rnd(1,Math.max(1,a*b-1)),ans=a*b-c;if(ans<0)return null;return{q:a+" × "+b+" - "+c+" =",a:ans,k:a*b,dh:"Multiply first: "+a+" × "+b+" = "+(a*b)+"\nThen subtract: "+(a*b)+" - "+c+" = "+ans};},
+            ()=>{const a=rnd(10,25),b=rnd(2,9),c=rnd(2,9),ans=(a-b)*c;if(a<=b)return null;return{q:"("+a+" - "+b+") × "+c+" =",a:ans,k:c,dh:"Brackets first: "+a+" - "+b+" = "+(a-b)+"\nThen multiply: "+(a-b)+" × "+c+" = "+ans};},
+            ()=>{const b=rnd(2,8),a=rnd(1,20),c=rnd(1,15),ans=a+b*b-c;if(ans<0)return null;return{q:a+" + "+b+"\u00B2 - "+c+" =",a:ans,k:b,dh:"Indices first: "+b+"² = "+(b*b)+"\nThen: "+a+" + "+(b*b)+" - "+c+" = "+ans};},
+            ()=>{const b=rnd(2,9),mult=rnd(2,10),a=b*mult,c=rnd(1,20),ans=a/b+c;return{q:a+" \u00F7 "+b+" + "+c+" =",a:ans,k:a,dh:"Divide first: "+a+" ÷ "+b+" = "+(a/b)+"\nThen add: "+(a/b)+" + "+c+" = "+ans};}
+          ];
+          let r=null;for(let _=0;_<30;_++){const f=variants[rnd(0,variants.length-1)];r=f();if(r&&Number.isInteger(r.a)&&r.a>=0&&r.a<=500)break;}
+          if(!r||!Number.isInteger(r.a)||r.a<0||r.a>500)break;
+          q={question:r.q,answer:r.a,leftBox:false,topic,keyNum:r.k,dynamicHint:r.dh};break;}
+        case"indices":{
+          const variants=[
+            ()=>{const b=pick([2,3,4,5,6,7,8,9,10,12]);return{q:b+"\u00B2 =",a:b*b,k:b,dh:b+"\u00B2 = "+b+" × "+b+" = "+(b*b)};},
+            ()=>{const b=pick([2,3,4,5]);return{q:b+"\u00B3 =",a:b*b*b,k:b,dh:b+"\u00B3 = "+b+" × "+b+" × "+b+" = "+(b*b*b)};}
+          ];
+          const r=pick(variants)();q={question:r.q,answer:r.a,leftBox:false,topic,keyNum:r.k,dynamicHint:r.dh};break;}
+        default:return genQ("addition",used);
+      }
+      if(q&&(q.keyNum===undefined||!used.has(q.keyNum))){if(q.keyNum!==undefined)used.add(q.keyNum);return q;}
+    }catch(e){}
+  }
+  return{question:rnd(10,99)+" + "+rnd(10,99)+" =",answer:50,leftBox:false,topic:"addition",keyNum:999};
+}
+
+const EXP={
+  addition:{title:"Adding Numbers",text:"Line up place values. Add right to left, carrying when needed.",example:"    11\n  3,472\n+ 2,856\n------\n  6,328",tip:"Always start from the ones column!",hint1:"Line up the digits carefully — ones under ones, tens under tens. Start from the right.",hint2:"Add the ones first. If the total is 10 or more, write the ones digit and carry the 1 to the next column."},
+  "place-value":{title:"Place Value",text:"Each digit's value depends on its position.",example:"7,549 = 7,000 + 500 + 40 + 9",tip:"Look at which column each digit sits in.",hint1:"Which column is the missing part in?",hint2:"Write out the full expansion — each digit's colour shows its column value."},
+  "missing-add":{title:"Missing Number (Addition)",text:"Addition and subtraction are opposites — rearrange the number sentence to find the missing number.",example:"___ + 38 = 100\n100 - 38 = 62\nSo the missing number is 62",tip:"Total minus the number you know!",hint1:"Rearrange the calculation by using the inverse operation: the missing number = the total number subtract the number you already know.",hint2:"Rearrange the calculation to subtract the number you know from the total."},
+  subtraction:{title:"Subtracting Numbers",text:"Line up place values. Subtract right to left, exchanging when needed.",example:"  5,834\n- 2,617\n------\n  3,217",tip:"If the top digit is smaller, exchange from the next column!",hint1:"Line up the digits. Start from the ones column.",hint2:"If the top digit is smaller, exchange from the next column."},
+  "sub-decimal":{title:"Subtracting Decimals from Whole Numbers",text:"Make the whole number the same length by adding in decimal placeholders (.0). Check your decimal points are lined up.",example:"  17.0\n-  3.6\n------\n  13.4",tip:"",hint1:"Make the whole number the same length by adding in decimal placeholders (.0). Check your decimal points are lined up.",hint2:"Subtract carefully, exchanging if needed."},
+  "missing-sub":{title:"Missing Number (Subtraction)",text:"Subtraction and addition are opposites — use this to rearrange the number sentence and find the missing number.",example:"801 - ___ = 795\n801 - 795 = 6\nSo the missing number is 6",tip:"Subtract the answer from the starting number!",hint1:"Rearrange: the missing number = the bigger number minus the other number.",hint2:"Subtract the number you know from the bigger number to find the gap."},
+  "multiply-three":{title:"Multiplying 3 Numbers",text:"Multiply the first two together, then multiply by the third.",example:"2 × 4 × 30 = 8 × 30 = 240",tip:"Look for easy pairs first!",hint1:"Multiply just two numbers first, then multiply by the third.",hint2:"Try different orders to find the easiest pair"},
+  "multiply-powers":{title:"Multiply by 10, 100 or 1000",text:"Move digits LEFT: 1 place for ×10, 2 for ×100, 3 for ×1000.",example:"4.5 × 100 = 450",tip:"Count the zeros — that's how many places to move!",hint1:"×10: move 1 left. ×100: move 2 left. ×1000: move 3 left.",hint2:"Follow the arrows — each digit moves left by the number of zeros."},
+  "divide-powers":{title:"Divide by 10, 100 or 1000",text:"Move digits RIGHT: 1 place for ÷10, 2 for ÷100, 3 for ÷1000.",example:"450 ÷ 100 = 4.5",tip:"Count the zeros — that's how many places to move right!",hint1:"÷10: move 1 right. ÷100: move 2 right. ÷1000: move 3 right.",hint2:"Follow the arrows — each digit moves right by the number of zeros. Add a decimal point if needed."},
+  "short-multiplication":{title:"Short Multiplication",text:"Multiply each digit right to left by the single number.",example:"  347\n×   6\n-----\n 2082",tip:"Work right to left — ones, then tens, then hundreds!",hint1:"Start from the ones. Carry any extras.",hint2:"___ × ones = ___, write ___, carry ___"},
+  "long-multiplication":{title:"Long Multiplication",text:"Multiply by ones digit first. Then multiply by tens digit (add a zero!). Add both rows.",example:"  234\n×  12\n-----\n  468 (234×2)\n 2340 (234×10)\n-----\n 2808",tip:"Don't forget the ZERO when multiplying by the tens digit!",hint1:"Row 1: multiply by ones. Row 2: write 0, multiply by tens. Add.",hint2:"___ × ___ (ones) = ___\n___ × ___ (tens) + 0 = ___\nTotal = ___"},
+  "short-division":{title:"Short Division (Bus Stop)",text:"Divide into each digit left to right. Carry remainders forward.",example:"852 ÷ 4 = 213",tip:"If a digit is too small to divide, carry it to the next!",hint1:"Divide into the first digit, carry any remainder.",hint2:"___ ÷ ___ = ___ remainder ___"},
+  "missing-div":{title:"Missing Number (Division)",text:"Division and multiplication are opposites — rearrange the number sentence to find the missing number.",example:"72 ÷ ___ = 9\n72 ÷ 9 = 8\nSo the missing number is 8",tip:"Think times tables!",hint1:"Rearrange: the missing number = the total divided by the answer.",hint2:"Which times table connects these numbers?"},
+  "long-division":{title:"Long Division",text:"Divide, multiply, subtract, bring down — repeat!",example:"156 ÷ 12 = 13\n12 × 10 = 120, 156-120=36\n12 × 3 = 36",tip:"Write out multiples of the divisor first!",hint1:"Write the first 9 multiples of the divisor. Then divide, multiply, subtract, bring down.",hint2:"How many times does the divisor go into the first digits?"},
+  "division-remainder":{title:"Division with a Remainder",text:"Divide normally. Express any remainder as a decimal.",example:"7 ÷ 2 = 3.5",tip:"After the remainder, add .0 and keep dividing!",hint1:"Divide as normal. If there's a remainder, add a decimal point.",hint2:"remainder ÷ divisor = decimal part"},
+  "fractions-add":{title:"Adding Fractions",text:"Find a common denominator first, then add the numerators.",example:"1/4 + 1/3 = 3/12 + 4/12 = 7/12",tip:"The bottom numbers must match before you add the tops!",hint1:"Find a number both denominators divide into.",hint2:"Common denominator of ___ and ___ is ___"},
+  "fractions-add-mixed":{title:"Adding Mixed Numbers",text:"Add whole numbers together, add fractions together, then combine.",example:"2 3/4 + 1 1/4 = 3 + 4/4 = 4",tip:"If the fractions add to more than 1 whole, carry it over!",hint1:"Add the whole numbers. Add the fractions. Combine.",hint2:"Add the whole numbers, then add the fractions separately."},
+  "fractions-subtract":{title:"Subtracting Fractions",text:"If denominators match, subtract the numerators. Simplify.",example:"7/10 - 3/10 = 4/10 = 2/5",tip:"Simplify by dividing top and bottom by the same number.",hint1:"If the bottoms match, just subtract the tops.",hint2:"Then simplify: divide the top and bottom by their greatest common denominator."},
+  "fractions-subtract-mixed":{title:"Subtracting Mixed Numbers",text:"Subtract whole numbers and fractions separately. Exchange 1 whole if needed.",example:"3 1/4 - 1 3/4 = 2 5/4 - 1 3/4 = 1 2/4 = 1 1/2",tip:"If the first fraction is smaller, exchange a whole and add it to your fraction!",hint1:"Subtract the whole numbers. Subtract the fractions. If the first fraction is smaller than the second, exchange a whole first.",hint2:"Exchange: 1 whole = denominator/denominator. Add it to your first fraction to make it an improper fraction, then subtract."},
+  "fractions-multiply":{title:"Fractions of an Amount",text:"Divide by the denominator first, then multiply by the numerator.",example:"3/8 of 240: 240÷8=30, 30×3=90",tip:"Divide by the bottom, times by the top.",hint1:"Step 1: divide by the denominator.\nStep 2: multiply by the numerator.",hint2:"___ ÷ ___ = ___\n___ × ___ = ___"},
+  "fractions-divide":{title:"Dividing a Fraction by a Whole Number",text:"Keep the numerator. Multiply the denominator by the whole number.",example:"3/4 ÷ 2 = 3/(4×2) = 3/8",tip:"Even though it's a divide, we times to get the answer!",hint1:"Keep the numerator. Multiply the denominator by the whole number.",hint2:"Keep the numerator. Multiply the denominator by the whole number."},
+  "decimals-add":{title:"Adding Decimals",text:"Line up the decimal points exactly, then add as normal.",example:"  12.4\n+  8.7\n------\n  21.1",tip:"Write zeros to make both numbers the same length!",hint1:"Line up the decimal points. Add zeros if needed.",hint2:"Make sure the decimal points are directly underneath each other"},
+  "decimals-subtract":{title:"Subtracting Decimals",text:"Line up the decimal points. Subtract right to left.",example:"  45.6\n- 12.4\n------\n  33.2",tip:"Write zeros to make both numbers the same length!",hint1:"Line up the decimal points. Add zeros if needed.",hint2:"Borrow from the column to the left if the top digit is smaller"},
+  "decimals-multiply":{title:"Multiplying Decimals",text:"Ignore the decimal, multiply normally, then put the point back.",example:"3.4 × 6: 34×6=204, so 20.4",tip:"Count decimal places — your answer needs that many!",hint1:"Multiply as whole numbers. Then count decimal places.",hint2:"Ignore the decimal point and multiply as whole numbers. Then count how many decimal places the question has — put that many in your answer."},
+  percentage:{title:"Percentage of an Amount",text:"Find 10% by dividing by 10, then scale up.",example:"20% of 350: 10%=35, ×2=70",tip:"10% = divide by 10. Build up from there!",hint1:"There are two methods! Method 1: Find 10% by dividing by 10, then scale up. Method 2: Multiply the amount by the percentage, then divide by 100.",hint2:"Method 1: 10% of ___ = ___, then ___% = ___\nMethod 2: ___ × ___ ÷ 100 = ___"},
+  bidmas:{title:"Order of Operations (BIDMAS)",text:"Brackets first, then Indices, then ×÷, then +−.",example:"5 + 3 × 4 = 5 + 12 = 17",tip:"Always do × and ÷ before + and −!",hint1:"Work in this order: Brackets, Indices, Division, Multiplication, Addition, Subtraction.",hint2:"Identify which operation to do first, then work through step by step."},
+
+  indices:{title:"Powers & Indices",text:"\u00B2 means squared (\u00D7 itself twice). \u00B3 means cubed (\u00D7 itself three times).",example:"3\u00B2 = 3\u00D73 = 9\n2\u00B3 = 2\u00D72\u00D72 = 8",tip:"The small number tells you how many times to multiply!",hint1:"The index tells you how many times to multiply the base number by itself.",hint2:"Write out the multiplication, then calculate."}
+};
+const getExp=t=>EXP[t]||EXP[t.replace(/-4d$/,"")]||EXP.addition;
+
+function generateFullPaper(){
+  const seq=["subtraction","addition","short-multiplication","subtraction","multiply-three","multiply-powers","decimals-add","short-division","short-multiplication","short-division","place-value","divide-powers","fractions-add","short-division","fractions-add-mixed","long-multiplication","divide-powers","bidmas","decimals-subtract","short-division","long-multiplication-4d","fractions-divide","percentage","long-division","fractions-add-mixed","decimals-multiply","fractions-subtract","fractions-subtract-mixed","long-division-4d","fractions-multiply","percentage","fractions-multiply","short-division","fractions-multiply","indices","long-multiplication"];
+  const usedByTopic={};
+  return seq.map(function(t){if(!usedByTopic[t])usedByTopic[t]=new Set();return genQ(t,usedByTopic[t]);});
+}
+
+const DEMO_PUPILS=[
+  {name:"Amelia Clarke",password:"demo",role:"pupil",sessions:8,lastLogin:"2026-02-24",practiseDates:["2026-02-17","2026-02-18","2026-02-19","2026-02-24"],topicProgress:{addition:{attempts:[1,1,1,1,1,1,1,1,0,1]},subtraction:{attempts:[1,1,0,1,1,0,1,1,1,1]},"long-division":{attempts:[0,0,1,0,0,1,0,0,0,1]},"fractions-add":{attempts:[0,1,0,0,1,0,1,0,0,1]},percentage:{attempts:[1,1,1,0,1,1,1,0,1,1]}},fullPapers:[{score:28,marks:40,date:"14/01/26",results:[]},{score:31,marks:40,date:"21/01/26",results:[]},{score:34,marks:40,date:"28/01/26",results:[]}]},
+  {name:"Ethan Brooks",password:"demo",role:"pupil",sessions:5,lastLogin:"2026-02-20",practiseDates:["2026-02-17","2026-02-20"],topicProgress:{addition:{attempts:[1,1,1,1,0,1,1,1,1,1]},"long-multiplication":{attempts:[0,0,0,1,0,0,0,1,0,0]}},fullPapers:[{score:25,marks:40,date:"15/01/26",results:[]},{score:27,marks:40,date:"22/01/26",results:[]}]},
+  {name:"Olivia Patel",password:"demo",role:"pupil",sessions:12,lastLogin:"2026-02-25",practiseDates:["2026-02-17","2026-02-18","2026-02-19","2026-02-20","2026-02-24","2026-02-25"],topicProgress:{addition:{attempts:[1,1,1,1,1,1,1,1,1,1]},"long-multiplication":{attempts:[1,1,1,0,1,1,1,1,1,1]},"long-division":{attempts:[1,1,0,1,1,1,1,1,1,1]},percentage:{attempts:[1,1,1,1,1,0,1,1,1,1]}},fullPapers:[{score:35,marks:40,date:"10/01/26",results:[]},{score:37,marks:40,date:"17/01/26",results:[]},{score:38,marks:40,date:"24/01/26",results:[]}]},
+  {name:"Noah Williams",password:"demo",role:"pupil",sessions:3,lastLogin:"2026-02-10",practiseDates:["2026-02-10"],topicProgress:{addition:{attempts:[1,0,1,0,1,0,1,0,1,0]}},fullPapers:[{score:18,marks:40,date:"20/01/26",results:[]}]},
+  {name:"Sophia Johnson",password:"demo",role:"pupil",sessions:7,lastLogin:"2026-02-24",practiseDates:["2026-02-18","2026-02-19","2026-02-24"],topicProgress:{addition:{attempts:[1,1,1,1,1,1,1,1,1,1]},percentage:{attempts:[1,0,1,1,0,1,1,0,1,1]}},fullPapers:[{score:30,marks:40,date:"12/01/26",results:[]},{score:32,marks:40,date:"19/01/26",results:[]}]},
+  {name:"Liam Harrison",password:"demo",role:"pupil",sessions:10,lastLogin:"2026-02-25",practiseDates:["2026-02-17","2026-02-18","2026-02-19","2026-02-20","2026-02-24","2026-02-25"],topicProgress:{addition:{attempts:[1,1,1,1,1,1,1,1,1,1]},"long-multiplication":{attempts:[1,1,0,1,1,1,0,1,1,1]},"long-division":{attempts:[1,0,1,1,0,1,1,0,1,1]}},fullPapers:[{score:32,marks:40,date:"08/01/26",results:[]},{score:34,marks:40,date:"15/01/26",results:[]},{score:36,marks:40,date:"22/01/26",results:[]}]},
+  {name:"Isabella Moore",password:"demo",role:"pupil",sessions:4,lastLogin:"2026-02-14",practiseDates:["2026-02-14"],topicProgress:{addition:{attempts:[1,1,0,1,1,0,1,1,0,1]}},fullPapers:[{score:24,marks:40,date:"18/01/26",results:[]},{score:27,marks:40,date:"25/01/26",results:[]}]},
+  {name:"Mason Taylor",password:"demo",role:"pupil",sessions:6,lastLogin:"2026-02-24",practiseDates:["2026-02-19","2026-02-24"],topicProgress:{addition:{attempts:[1,1,1,1,1,1,1,1,1,1]},"long-multiplication":{attempts:[1,1,1,0,1,1,1,0,1,1]}},fullPapers:[{score:31,marks:40,date:"11/01/26",results:[]},{score:33,marks:40,date:"18/01/26",results:[]}]},
+  {name:"Grace Wilson",password:"demo",role:"pupil",sessions:9,lastLogin:"2026-02-25",practiseDates:["2026-02-17","2026-02-18","2026-02-19","2026-02-24","2026-02-25"],topicProgress:{addition:{attempts:[1,1,1,1,1,1,1,1,1,1]},"long-division":{attempts:[1,0,1,1,0,1,1,0,1,1]}},fullPapers:[{score:33,marks:40,date:"09/01/26",results:[]},{score:35,marks:40,date:"16/01/26",results:[]},{score:36,marks:40,date:"23/01/26",results:[]}]},
+  {name:"James Anderson",password:"demo",role:"pupil",sessions:2,lastLogin:"2026-01-22",practiseDates:["2026-01-22"],topicProgress:{addition:{attempts:[0,1,0,1,0,1,0,1,0,1]}},fullPapers:[{score:15,marks:40,date:"22/01/26",results:[]}]}
+];
+
+// ── UI primitives ─────────────────────────────────────────────────────────────
+function Btn({children,onClick,color,textColor,style,disabled}){
+  const bg=disabled?"#d1d5db":(color||C.primary);const tc=disabled?"#9ca3af":(textColor||"#fff");
+  return <button onClick={disabled?undefined:onClick} style={{background:bg,color:tc,border:"none",borderRadius:10,padding:"10px 20px",fontWeight:700,fontSize:15,cursor:disabled?"not-allowed":"pointer",fontFamily:"system-ui,sans-serif",lineHeight:1.2,...(style||{})}}>{children}</button>;
+}
+function Card({children,style}){return <div style={{background:C.white,borderRadius:14,padding:20,boxShadow:"0 2px 12px rgba(0,0,0,0.08)",...(style||{})}}>{children}</div>;}
+function PBar({pct,color}){return <div style={{background:"#e5e7eb",borderRadius:99,height:8,overflow:"hidden"}}><div style={{width:Math.min(100,Math.max(0,pct))+"%",background:color,height:"100%",borderRadius:99,transition:"width 0.4s"}}/></div>;}
+function Tab({label,active,onClick}){
+  return <button onClick={onClick} style={{padding:"10px 18px",border:"none",borderBottom:active?"3px solid "+C.primary:"3px solid transparent",background:"none",fontWeight:active?800:500,color:active?C.primary:C.textL,cursor:"pointer",fontSize:14,fontFamily:"system-ui",whiteSpace:"nowrap"}}>{label}</button>;
+}
+
+// ── ColHint components (column-format working) ────────────────────────────────
+// ── Column colours: O=pink, T=blue, H=green, Th=purple ───────────────────────
+const HC=["#c0392b","#2980b9","#27ae60","#7c3aed","#e67e22"];
+const HL=["O","T","H","Th","TTh"];
+const CW=44; // cell width px
+
+function htoHeader(maxLen){
+  return(
+    <div style={{display:"flex",gap:3,marginBottom:6}}>
+      <div style={{width:30,flexShrink:0}}/>
+      {Array.from({length:maxLen}).map(function(_,ci){
+        const pos=maxLen-1-ci;const c=HC[pos]||"#888";const lbl=HL[pos]||"?";
+        return <div key={ci} style={{width:CW,height:30,background:c,borderRadius:7,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:900,color:"#fff",flexShrink:0}}>{lbl}</div>;
+      })}
+    </div>
+  );
+}
+function htoDigitRow(numStr,sym,maxLen){
+  const padded=numStr.padStart(maxLen,"0");
+  return(
+    <div style={{display:"flex",alignItems:"center",gap:3,marginBottom:2}}>
+      <div style={{width:30,textAlign:"center",fontSize:22,fontWeight:900,color:"#333",flexShrink:0}}>{sym}</div>
+      {padded.split("").map(function(d,ci){
+        const pos=maxLen-1-ci;const c=HC[pos]||"#888";
+        const invisible=d==="0"&&numStr.replace(/^0+/,"").length<maxLen-ci;
+        return <div key={ci} style={{width:CW,display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,fontWeight:900,color:invisible?"transparent":c,fontFamily:"system-ui",flexShrink:0}}>{d}</div>;
+      })}
+    </div>
+  );
+}
+function htoDivLine(maxLen){
+  return <div style={{borderTop:"3px solid #222",margin:"3px 0 3px 33px"}}/>;
+}
+
+function ColHintAdd({nums,answer,hideAnswer}){
+  const maxLen=Math.max(...nums.map(function(n){return String(n).length;}),String(answer).length);
+  const carries=new Array(maxLen).fill(0);
+  let carry=0;
+  for(let p=maxLen-1;p>=0;p--){
+    const s=nums.reduce(function(acc,n){return acc+(parseInt(String(n).padStart(maxLen,"0")[p])||0);},0)+carry;
+    carry=Math.floor(s/10);if(p>0)carries[p-1]=carry;
+  }
+  const showCarries=carries.some(function(c){return c>0;});
+  return(
+    <div style={{display:"inline-block",background:"#fff",borderRadius:12,padding:"12px 14px",border:"2px solid #e5e7eb",marginBottom:8}}>
+      {htoHeader(maxLen)}
+      {nums.map(function(n,i){return htoDigitRow(String(n),i===0?"":"+",maxLen);})}
+      {htoDivLine(maxLen)}
+      {hideAnswer
+        ?(<div style={{display:"flex",alignItems:"center",gap:3}}>
+            <div style={{width:30,flexShrink:0}}/>
+            {Array.from({length:maxLen}).map(function(_,ci){const pos=maxLen-1-ci;return <div key={ci} style={{width:CW,display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,fontWeight:900,color:HC[pos]||"#888",opacity:0.35,flexShrink:0}}>?</div>;})}
+          </div>)
+        :htoDigitRow(String(answer),"",maxLen)}
+      {htoDivLine(maxLen)}
+      {showCarries&&(
+        <div style={{display:"flex",gap:3}}>
+          <div style={{width:30,flexShrink:0}}/>
+          {carries.map(function(c,ci){const pos=maxLen-1-ci;return <div key={ci} style={{width:CW,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,color:HC[pos]||"#888",flexShrink:0}}>{c>0?c:""}</div>;})}
+        </div>
+      )}
+    </div>
+  );
+}
+function ColHintSub({top,bot,answer,hideAnswer}){
+  const tArr=String(top).split("").map(Number);
+  const bArr=String(bot).split("").map(Number);
+  const len=Math.max(tArr.length,bArr.length);
+  while(tArr.length<len)tArr.unshift(0);
+  while(bArr.length<len)bArr.unshift(0);
+  const topW=[...tArr];
+  const exchFrom=new Array(len).fill(false);
+  const exchTo=new Array(len).fill(false);
+  for(let i=len-1;i>=0;i--){
+    if(topW[i]<bArr[i]){
+      topW[i]+=10;exchTo[i]=true;
+      for(let j=i-1;j>=0;j--){
+        if(topW[j]>0){topW[j]-=1;exchFrom[j]=true;break;}
+        topW[j]+=9;exchFrom[j]=true;exchTo[j]=true;
+      }
+    }
+  }
+  const pAns=String(answer).padStart(len,"0").split("").map(Number);
+  return(
+    <div style={{display:"inline-block",background:"#fff",borderRadius:12,padding:"12px 14px",border:"2px solid #e5e7eb",marginBottom:8}}>
+      {htoHeader(len)}
+      <div style={{display:"flex",alignItems:"center",gap:3,marginBottom:2}}>
+        <div style={{width:30,flexShrink:0}}/>
+        {tArr.map(function(orig,ci){
+          const pos=len-1-ci;const c=HC[pos]||"#888";
+          const gave=exchFrom[ci];const got=exchTo[ci];const worked=topW[ci];
+          const invisible=orig===0&&ci<len-1&&!gave&&!got;
+          return(
+            <div key={ci} style={{width:CW,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",height:46,position:"relative"}}>
+              {gave?(
+                <div style={{display:"inline-flex",alignItems:"flex-end",gap:1}}>
+                  <span style={{fontSize:13,fontWeight:900,color:"#e67e22",lineHeight:1,paddingBottom:4}}>{worked}</span>
+                  <span style={{fontSize:28,fontWeight:900,color:c,opacity:0.4,textDecoration:"line-through",textDecorationColor:"#888"}}>{orig}</span>
+                </div>
+              ):got?(
+                <div style={{position:"relative"}}>
+                  <span style={{fontSize:28,fontWeight:900,color:c}}>{orig}</span>
+                  <span style={{position:"absolute",top:2,left:-11,fontSize:13,fontWeight:900,color:"#e67e22"}}>1</span>
+                </div>
+              ):(
+                <span style={{fontSize:28,fontWeight:900,color:invisible?"transparent":c}}>{invisible?"":orig}</span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      {htoDigitRow(String(bot),"−",len)}
+      {htoDivLine(len)}
+      {hideAnswer
+        ?(<div style={{display:"flex",alignItems:"center",gap:3}}>
+            <div style={{width:30,flexShrink:0}}/>
+            {Array.from({length:len}).map(function(_,ci){const pos=len-1-ci;return <div key={ci} style={{width:CW,display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,fontWeight:900,color:HC[pos]||"#888",opacity:0.35,flexShrink:0}}>?</div>;})}
+          </div>)
+        :(<div style={{display:"flex",alignItems:"center",gap:3}}>
+            <div style={{width:30,flexShrink:0}}/>
+            {pAns.map(function(d,ci){const pos=len-1-ci;const c=HC[pos]||"#888";const inv=d===0&&ci<len-1;return <div key={ci} style={{width:CW,display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,fontWeight:900,color:inv?"transparent":c,flexShrink:0}}>{inv?"":d}</div>;})}
+          </div>)}
+    </div>
+  );
+}
+function ColHintShortMult({top,mult,answer,hideAnswer}){
+  const tS=String(top),aS=String(answer);
+  const maxLen=Math.max(tS.length,aS.length);
+  const ansDigits=aS.split("").map(Number);
+  const ansLen=ansDigits.length;
+  // compute carries per column (indexed from right, 0=ones)
+  const carries=new Array(ansLen+1).fill(0);
+  let c=0;
+  for(let i=tS.length-1;i>=0;i--){
+    const prod=parseInt(tS[i])*mult+c;
+    c=Math.floor(prod/10);
+    carries[tS.length-i]=c;
+    c=Math.floor(prod/10);
+  }
+  const DF="system-ui,sans-serif";
+  function digitCell(d,pos,hide){
+    return(<div style={{width:CW,height:44,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,fontWeight:900,fontFamily:DF,color:hide?"#bbb":(HC[pos]||"#888")}}>{hide?"?":d}</div>);
+  }
+  return(
+    <div style={{display:"inline-block",background:"#fff",borderRadius:8,padding:"8px 10px",border:"2px solid #e5e7eb",fontFamily:DF}}>
+      {htoHeader(maxLen)}
+      <div style={{display:"flex",height:44}}>
+        <div style={{width:CW,flexShrink:0}}/>
+        {tS.padStart(maxLen," ").split("").map(function(d,i){
+          const pos=maxLen-1-i;const blank=d===" ";
+          return <div key={i} style={{width:CW,height:44,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,fontWeight:900,fontFamily:DF,color:blank?"transparent":(HC[pos]||"#888")}}>{blank?"":d}</div>;
+        })}
+      </div>
+      <div style={{display:"flex",height:44}}>
+        <div style={{width:CW,height:44,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,fontWeight:900,fontFamily:DF,color:"#7c3aed"}}>×</div>
+        {String(mult).padStart(maxLen," ").split("").map(function(d,i){
+          const pos=maxLen-1-i;const blank=d===" ";
+          return <div key={i} style={{width:CW,height:44,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,fontWeight:900,fontFamily:DF,color:blank?"transparent":(HC[pos]||"#888")}}>{blank?"":d}</div>;
+        })}
+      </div>
+      <div style={{borderTop:"3px solid #222",margin:"2px 0",marginLeft:CW}}/>
+      <div style={{display:"flex",height:44}}>
+        <div style={{width:CW,flexShrink:0}}/>
+        {ansDigits.map(function(d,i){const pos=ansLen-1-i;return digitCell(d,pos,hideAnswer);})}
+      </div>
+      <div style={{borderTop:"2px solid #aaa",margin:"2px 0",marginLeft:CW}}/>
+      <div style={{display:"flex"}}>
+        <div style={{width:CW,flexShrink:0}}/>
+        {carries.slice(0,ansLen).map(function(cv,i){const pos=ansLen-1-i;return(<div key={i} style={{width:CW,height:18,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:900,fontFamily:DF,color:cv?(HC[pos]||"#888"):"transparent"}}>{cv||""}</div>);})}
+      </div>
+    </div>
+  );
+}
+function ColHintLongMult({a,b,partial1,partial2,answer,hideAnswer}){
+  const ones=b%10,tens=Math.floor(b/10);
+  const aS=String(a),ansS=String(answer),p1S=String(partial1),p2S=String(partial2);
+  const maxLen=Math.max(aS.length,ansS.length,p1S.length,p2S.length);
+  const ansLen=ansS.length;
+  const DF="system-ui,sans-serif";
+  function row(numStr,sym,label){
+    const padded=numStr.padStart(maxLen," ");
+    return(
+      <div style={{display:"flex",alignItems:"center",height:44}}>
+        <div style={{width:CW,height:44,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,fontWeight:900,fontFamily:DF,color:"#7c3aed"}}>{sym}</div>
+        {padded.split("").map(function(d,i){
+          const pos=maxLen-1-i;const blank=d===" ";
+          return <div key={i} style={{width:CW,height:44,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,fontWeight:900,fontFamily:DF,color:blank?"transparent":(HC[pos]||"#888")}}>{blank?"":d}</div>;
+        })}
+        {label&&<span style={{fontSize:11,color:"#888",marginLeft:6,fontFamily:DF,fontWeight:700,whiteSpace:"nowrap"}}>{label}</span>}
+      </div>
+    );
+  }
+  // Addition carries
+  const p1Pad=p1S.padStart(ansLen,"0").split("").map(Number);
+  const p2Pad=p2S.padStart(ansLen,"0").split("").map(Number);
+  const addCarries=new Array(ansLen).fill(0);
+  let ac=0;
+  for(let i=ansLen-1;i>=0;i--){
+    const s=p1Pad[i]+p2Pad[i]+ac;
+    ac=Math.floor(s/10);
+    if(i>0)addCarries[i-1]=ac;
+  }
+  return(
+    <div style={{display:"inline-block",background:"#fff",borderRadius:8,padding:"8px 10px",border:"2px solid #e5e7eb",fontFamily:DF}}>
+      {htoHeader(maxLen)}
+      {row(aS,"",null)}
+      {row(String(b),"×",null)}
+      <div style={{borderTop:"3px solid #222",margin:"2px 0",marginLeft:CW}}/>
+      {row(p1S,"","("+a+"×"+ones+")")}
+      {row(p2S,"","("+a+"×"+tens*10+")")}
+      <div style={{borderTop:"3px solid #222",margin:"2px 0",marginLeft:CW}}/>
+      <div style={{display:"flex",alignItems:"center",height:44}}>
+        <div style={{width:CW,flexShrink:0}}/>
+        {ansS.padStart(maxLen," ").split("").map(function(d,i){
+          const pos=maxLen-1-i;const blank=d===" ";
+          return <div key={i} style={{width:CW,height:44,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,fontWeight:900,fontFamily:DF,color:hideAnswer?"#bbb":blank?"transparent":(HC[pos]||"#888")}}>{hideAnswer?"?":blank?"":d}</div>;
+        })}
+      </div>
+      <div style={{borderTop:"2px solid #aaa",margin:"2px 0",marginLeft:CW}}/>
+      <div style={{display:"flex"}}>
+        <div style={{width:CW,flexShrink:0}}/>
+        {addCarries.map(function(cv,i){const pos=ansLen-1-i;return(<div key={i} style={{width:CW,height:18,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:900,fontFamily:DF,color:cv?(HC[pos]||"#888"):"transparent"}}>{cv||""}</div>);})}
+      </div>
+    </div>
+  );
+}
+function renderColHint(ch,hideAnswer){
+  if(!ch)return null;
+  if(ch.type==="colAdd")return<ColHintAdd {...ch} hideAnswer={hideAnswer}/>;
+  if(ch.type==="colSub")return<ColHintSub {...ch} hideAnswer={hideAnswer}/>;
+  if(ch.type==="shortMult")return<ColHintShortMult {...ch} hideAnswer={hideAnswer}/>;
+  if(ch.type==="longMult")return<ColHintLongMult {...ch} hideAnswer={hideAnswer}/>;
+  return null;
+}
+function ColHintShortDiv({dividend,divisor,answer,hideAnswer}){
+  const dvdS=String(dividend);const len=dvdS.length;
+  const DF="system-ui,sans-serif";
+  const steps=[];let rem=0;
+  for(let i=0;i<len;i++){
+    const cur=rem*10+parseInt(dvdS[i]);
+    const q=Math.floor(cur/divisor);
+    rem=cur-q*divisor;
+    steps.push({cur,q,rem});
+  }
+  const divCharW=String(divisor).length*16+14;
+  return(
+    <div style={{display:"inline-block",background:"#fff",borderRadius:8,padding:"8px 10px",border:"2px solid #e5e7eb",fontFamily:DF,marginBottom:8}}>
+      <div style={{display:"flex",height:44}}>
+        <div style={{width:divCharW,flexShrink:0}}/>
+        {steps.map(function(s,i){const pos=len-1-i;return(<div key={i} style={{width:38,height:44,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,fontWeight:900,fontFamily:DF,color:hideAnswer?"#bbb":(HC[pos]||"#888")}}>{hideAnswer?"?":s.q}</div>);})}
+      </div>
+      <div style={{display:"flex",height:44}}>
+        <div style={{width:divCharW,height:44,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"flex-end",paddingRight:5,fontSize:24,fontWeight:900,fontFamily:DF,color:"#7c3aed",boxShadow:"3px 0 0 0 #222"}}>{divisor}</div>
+        <div style={{display:"flex",height:44,flexShrink:0,boxShadow:"0 -3px 0 0 #222",overflow:"visible"}}>
+          {dvdS.split("").map(function(d,i){
+            const pos=len-1-i;const prevRem=i===0?0:steps[i-1].rem;
+            return(<div key={i} style={{width:38,height:44,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,fontWeight:900,fontFamily:DF,color:HC[pos]||"#888",position:"relative"}}>
+              {prevRem>0&&<span style={{position:"absolute",top:2,left:1,fontSize:10,fontWeight:900,fontFamily:DF,color:HC[pos]||"#888",opacity:0.85}}>{prevRem}</span>}
+              {d}
+            </div>);
+          })}
+        </div>
+      </div>
+      <div style={{marginTop:10}}>
+        {steps.map(function(s,i){
+          const pos=len-1-i;const col=HC[pos]||"#888";
+          const remText=s.rem>0?<span>, remainder <strong style={{color:col}}>{s.rem}</strong> — carry the {s.rem}</span>:null;
+          return(<div key={i} style={{display:"flex",alignItems:"flex-start",gap:7,marginBottom:6}}>
+            <div style={{minWidth:20,height:20,borderRadius:"50%",background:col,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:900,fontFamily:DF,color:"#fff",flexShrink:0,marginTop:1}}>{i+1}</div>
+            <div style={{fontSize:12,fontFamily:DF,color:"#1a1a1a",lineHeight:1.5}}>
+              <strong>Step {i+1}:</strong> How many <strong style={{color:"#7c3aed"}}>{divisor}</strong>s go into <strong style={{color:col}}>{s.cur}</strong>? → <strong>{s.q}</strong>{remText}
+            </div>
+          </div>);
+        })}
+      </div>
+    </div>
+  );
+}
+// Place value colour-coded expansion
+function ColHintPlaceValue({num,missingPos}){
+  const PC=["#c0392b","#2980b9","#27ae60","#7c3aed","#e67e22"];
+  const PL=["O","T","H","Th","TTh"];
+  const PV=[1,10,100,1000,10000];
+  const digits=String(num).split("").map(Number);
+  const len=digits.length;
+  return(
+    <div style={{background:"#fff",borderRadius:8,padding:"10px 12px",border:"2px solid "+C.primary,display:"inline-block",marginBottom:8}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:2,fontSize:26,fontWeight:900,marginBottom:10}}>
+        {digits.map(function(d,i){
+          const pos=len-1-i;const col=PC[Math.min(pos,PC.length-1)];
+          return<span key={i} style={{color:col}}>{d}</span>;
+        })}
+      </div>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"center",flexWrap:"wrap",gap:4,fontSize:14,fontWeight:700}}>
+        {digits.map(function(d,i){
+          if(d===0)return null;
+          const pos=len-1-i;const col=PC[Math.min(pos,PC.length-1)];
+          const val=(d*PV[pos]).toLocaleString();
+          const isMissing=(missingPos==="h"&&pos===2)||(missingPos==="t"&&pos===1)||(missingPos==="o"&&pos===0);
+          return[
+            i>0&&digits.slice(0,i).some(function(x){return x>0;})&&<span key={"plus"+i} style={{color:"#555"}}>+</span>,
+            <span key={i} style={{color:isMissing?"#bbb":col,textDecoration:isMissing?"underline dotted":"none"}}>{isMissing?"???":val}</span>
+          ];
+        })}
+      </div>
+    </div>
+  );
+}
+// Decimal subtraction colour-coded column layout
+function ColHintDecSub({top,bot,answer,hideAnswer}){
+  const PC=["#c0392b","#2980b9","#27ae60","#7c3aed"];
+  const PL=["1/10","O","T","H"];
+  const SLOTS=[{pos:2,li:3},{pos:1,li:2},{pos:0,li:1},{pos:"dot"},{pos:-1,li:0}];
+  const CW=28,DW=14,SW=28;
+  function getDigit(n,pos){
+    const s=n.toFixed(1);const parts=s.split(".");
+    const int=parts[0],dec=parts[1]||"0";
+    if(pos===-1)return dec[0]||"0";
+    const fr=int.length-1-pos;
+    return(fr<0||fr>=int.length)?null:int[fr];
+  }
+  function hdrRow(n){
+    return(
+      <div style={{display:"flex",alignItems:"center",marginBottom:6}}>
+        <div style={{width:SW,flexShrink:0}}/>
+        {SLOTS.map(function(sl,i){
+          if(sl.pos==="dot")return<div key={i} style={{width:DW,flexShrink:0}}/>;
+          const d=getDigit(n,sl.pos);
+          if(d===null)return<div key={i} style={{width:CW,flexShrink:0}}/>;
+          const col=PC[sl.li];
+          return<div key={i} style={{width:CW,height:22,background:col,borderRadius:4,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:900,color:"#fff",flexShrink:0}}>{PL[sl.li]}</div>;
+        })}
+      </div>
+    );
+  }
+  function numRow(n,sym,hide,isAns){
+    return(
+      <div style={{display:"flex",alignItems:"center",marginBottom:2}}>
+        <div style={{width:SW,textAlign:"right",fontSize:20,fontWeight:800,color:"#333",flexShrink:0,paddingRight:4}}>{sym}</div>
+        {SLOTS.map(function(sl,i){
+          if(sl.pos==="dot")return<div key={i} style={{width:DW,textAlign:"center",fontSize:22,fontWeight:900,color:"#555",flexShrink:0}}>.</div>;
+          const d=getDigit(n,sl.pos);
+          const blank=d===null;
+          const col=PC[sl.li];
+          const disp=(hide&&isAns)?"?":(blank?"":d);
+          const clr=(hide&&isAns)?"#bbb":(blank?"transparent":col);
+          return<div key={i} style={{width:CW,textAlign:"center",fontSize:22,fontWeight:900,color:clr,flexShrink:0}}>{disp}</div>;
+        })}
+      </div>
+    );
+  }
+  return(
+    <div style={{background:"#fff",borderRadius:8,padding:"10px 12px",border:"2px solid "+C.primary,display:"inline-block",marginBottom:8}}>
+      {hdrRow(top)}
+      {numRow(top,"",false,false)}
+      {numRow(bot,"−",false,false)}
+      <div style={{borderTop:"3px solid #222",margin:"3px 0",marginLeft:SW}}/>
+      {numRow(answer,"",hideAnswer,true)}
+    </div>
+  );
+}
+// Single unified box: NoteBox text + column layout below (no separate second box)
+function CombinedHintBox({exp,colHint,hideAnswer}){
+  return(
+    <div style={{background:"#fffef5",border:"1px solid #d1a054",borderRadius:8,padding:"12px 14px",marginBottom:8,fontFamily:"Georgia,serif"}}>
+      <div style={{fontSize:16,fontWeight:700,marginBottom:4,color:"#1a3a6e"}}>{exp.title}</div>
+      <div style={{fontSize:14,lineHeight:1.6,whiteSpace:"pre-wrap",marginBottom:10}}>{exp.text}</div>
+      {hideAnswer&&<div style={{fontSize:13,color:"#b45309",marginBottom:8,fontStyle:"italic"}}>Work out the answer using the method above — can you get it?</div>}
+      {renderColHint(colHint,hideAnswer)}
+    </div>
+  );
+}
+
+// Place value grid with arrows for ×÷ powers of 10 (pure HTML, real-position system)
+function PlaceValueGrid({before,after,shift,showArrows}){
+  const COL_DEFS=[
+    {realPos:5,line1:"100,000s",line2:"",   col:"#be185d"},
+    {realPos:4,line1:"10,000s", line2:"",   col:"#b45309"},
+    {realPos:3,line1:"1,000s",  line2:"",   col:"#7c3aed"},
+    {realPos:2,line1:"100s",    line2:"",   col:"#27ae60"},
+    {realPos:1,line1:"10s",     line2:"",   col:"#2980b9"},
+    {realPos:0,line1:"1s",      line2:"",   col:"#c0392b"},
+    {realPos:null,line1:"",     line2:"",   col:"#555",isDot:true},
+    {realPos:-1,line1:"1",      line2:"10", col:"#e67e22",isFrac:true},
+    {realPos:-2,line1:"1",      line2:"100",col:"#16a085",isFrac:true},
+    {realPos:-3,line1:"1",      line2:"1000",col:"#8e44ad",isFrac:true},
+  ];
+  const CW=38,DW=12,HDR_H=44;
+  function parseDigits(n){
+    const s=String(parseFloat(Number(n).toFixed(5)));
+    const dp=s.indexOf(".");
+    const intP=dp>=0?s.slice(0,dp):s;
+    const decP=dp>=0?s.slice(dp+1):"";
+    const res=[];
+    for(let i=0;i<intP.length;i++)res.push({realPos:i,d:intP[intP.length-1-i]});
+    for(let i=0;i<decP.length&&i<3;i++)res.push({realPos:-(i+1),d:decP[i]});
+    return res;
+  }
+  const dBefore=parseDigits(before);
+  const dAfter=parseDigits(after);
+  const allRP=[...dBefore,...dAfter].map(function(x){return x.realPos;});
+  const minRP=Math.min(...allRP),maxRP=Math.min(5,Math.max(...allRP));
+  const hasDec=allRP.some(function(r){return r<0;});
+  const hasInt=allRP.some(function(r){return r>=0;});
+  const visCols=COL_DEFS.filter(function(c){
+    if(c.isDot)return hasDec&&hasInt;
+    return c.realPos>=minRP&&c.realPos<=maxRP;
+  });
+  const xCentre={};
+  let xAcc=0;
+  visCols.forEach(function(c){
+    const w=c.isDot?DW:CW;
+    if(c.isDot)xCentre["dot"]=xAcc+w/2;
+    else xCentre[c.realPos]=xAcc+w/2;
+    xAcc+=w+1;
+  });
+  const totalW=xAcc;
+  const mapB={},mapA={};
+  dBefore.forEach(function(x){mapB[x.realPos]=x.d;});
+  dAfter.forEach(function(x){mapA[x.realPos]=x.d;});
+  function renderHeader(){
+    return visCols.map(function(c,i){
+      if(c.isDot)return(<div key={i} style={{width:DW,flexShrink:0,height:HDR_H}}/>);
+      return(
+        <div key={i} style={{width:CW,flexShrink:0,background:c.col,borderRadius:6,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:HDR_H,marginRight:1,padding:"2px 1px"}}>
+          {c.isFrac
+            ?<><span style={{fontSize:9,fontWeight:900,color:"#fff",lineHeight:1.2}}>1</span><span style={{fontSize:8,fontWeight:900,color:"#fff",lineHeight:1}}>───</span><span style={{fontSize:9,fontWeight:900,color:"#fff",lineHeight:1.2}}>{c.line2}</span></>
+            :<><span style={{fontSize:9,fontWeight:900,color:"#fff",lineHeight:1.3,textAlign:"center"}}>{c.line1}</span></>
+          }
+        </div>
+      );
+    });
+  }
+  function renderRow(map){
+    const showDot=hasDec&&hasInt;
+    return visCols.map(function(c,i){
+      if(c.isDot)return(<div key={i} style={{width:DW,flexShrink:0,textAlign:"center",fontSize:22,fontWeight:900,color:showDot?"#555":"transparent"}}>.</div>);
+      const d=map[c.realPos];
+      const has=d!==undefined;
+      return(<div key={i} style={{width:CW,height:44,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,fontWeight:900,color:has?c.col:"transparent"}}>{has?d:""}</div>);
+    });
+  }
+  function renderArrows(){
+    const H=46;
+    const lines=dBefore.map(function(item,i){
+      const targetRP=item.realPos+shift;
+      const x1=xCentre[item.realPos],x2=xCentre[targetRP];
+      if(x1===undefined||x2===undefined)return null;
+      const y1=8,y2=H-10;
+      const ang=Math.atan2(y2-y1,x2-x1),hs=7;
+      return(
+        <g key={i}>
+          <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="#e74c3c" strokeWidth="2.5"/>
+          <polygon points={x2+","+y2+" "+(x2-hs*Math.cos(ang-0.4))+","+(y2-hs*Math.sin(ang-0.4))+" "+(x2-hs*Math.cos(ang+0.4))+","+(y2-hs*Math.sin(ang+0.4))} fill="#e74c3c"/>
+        </g>
+      );
+    }).filter(Boolean);
+    if(!lines.length)return null;
+    return(<svg width={totalW} height={H} style={{display:"block",overflow:"visible"}}>{lines}</svg>);
+  }
+  const isMultiply=shift>0;
+  const textExpl=isMultiply
+    ?"Multiply: digits jump left.  ×10 = 1 jump,  ×100 = 2 jumps,  ×1000 = 3 jumps"
+    :"Divide: digits jump right.  ÷10 = 1 jump,  ÷100 = 2 jumps,  ÷1000 = 3 jumps";
+  return(
+    <div style={{display:"inline-block",background:"#fff",borderRadius:10,border:"2px solid #e5e7eb",padding:"10px 12px",marginBottom:8}}>
+      <div style={{fontSize:12,fontWeight:700,color:"#555",marginBottom:8,fontFamily:"system-ui"}}>{textExpl}</div>
+      <div style={{display:"flex",marginBottom:4}}>{renderHeader()}</div>
+      <div style={{display:"flex"}}>{renderRow(mapB)}</div>
+      {showArrows
+        ?<div style={{padding:"3px 0"}}>{renderArrows()}</div>
+        :<div style={{borderTop:"2px solid #ccc",margin:"2px 0"}}/>
+      }
+      <div style={{display:"flex"}}>{renderRow(mapA)}</div>
+    </div>
+  );
+}
+
+
+// Adding fractions visual with arrows (topic 16)
+function FracAddVisual({n1,d1,n2,d2,hideAnswer}){
+  const gcdF=function(a,b){return b===0?a:gcdF(b,a%b);};
+  const lcmF=function(a,b){return a*b/gcdF(a,b);};
+  const cd=lcmF(d1,d2),fM1=cd/d1,fM2=cd/d2,en1=n1*fM1,en2=n2*fM2,sumN=en1+en2;
+  const g=gcdF(sumN,cd),ansN=sumN/g,ansD=cd/g;
+  const whole=Math.floor(ansN/ansD),remN=ansN%ansD;
+  const ansStr=whole>0?(remN>0?whole+" "+remN+"/"+ansD:String(whole)):ansN+"/"+ansD;
+  const C1="#e74c3c",C2="#2980b9",FS=20;
+  const FW=44,OPW=32;
+  // x centres of each fraction slot — computed from slot edges, not relative offsets
+  const xF1=FW/2;                          // 22
+  const xF2=FW+OPW+FW/2;                  // 98
+  const xEF1=2*(FW+OPW)+FW/2;             // 174
+  const xEF2=3*(FW+OPW)+FW/2;             // 250
+  const totalW=4*FW+3*OPW+8;              // 280
+  const PAD=44;
+  const fracH=FS*2+8;
+  const midY=PAD+fracH/2;
+  const topY=PAD+4;
+  const botY=PAD+fracH-4;
+  const svgH=PAD*2+fracH;
+  function arc(x1,y1,x2,y2,col,label,above){
+    const cpY=above?Math.min(y1,y2)-36:Math.max(y1,y2)+36;
+    const mx=(x1+x2)/2;
+    const t=0.93;
+    const bx=(1-t)*(1-t)*x1+2*(1-t)*t*mx+t*t*x2;
+    const by=(1-t)*(1-t)*y1+2*(1-t)*t*cpY+t*t*y2;
+    const ang=Math.atan2(y2-by,x2-bx);
+    const hs=7;
+    const px1=x2-hs*Math.cos(ang-0.4);
+    const py1=y2-hs*Math.sin(ang-0.4);
+    const px2=x2-hs*Math.cos(ang+0.4);
+    const py2=y2-hs*Math.sin(ang+0.4);
+    const lx=mx;
+    const ly=above?cpY+8:cpY-8;
+    const pts=x2+","+y2+" "+px1+","+py1+" "+px2+","+py2;
+    return(
+      <g key={x1+"-"+x2+"-"+above}>
+        <path d={"M"+x1+","+y1+" Q"+mx+","+cpY+" "+x2+","+y2} stroke={col} strokeWidth="2.5" fill="none"/>
+        <polygon points={pts} fill={col}/>
+        <rect x={lx-15} y={ly-9} width="30" height="18" rx="4" fill={col}/>
+        <text x={lx} y={ly+5} textAnchor="middle" fontSize="11" fontWeight="900" fontFamily="system-ui" fill="#fff">{"x"+label}</text>
+      </g>
+    );
+  }
+  function Fr({n,d,col,cx}){
+    const lw=String(Math.max(n,d)).length*10+8;
+    return(
+      <g>
+        <text x={cx} y={midY-FS*0.2} textAnchor="middle" fontSize={FS} fontWeight="900" fontFamily="system-ui" fill={col}>{n}</text>
+        <line x1={cx-lw/2} y1={midY+4} x2={cx+lw/2} y2={midY+4} stroke={col} strokeWidth="2.5" strokeLinecap="round"/>
+        <text x={cx} y={midY+FS+6} textAnchor="middle" fontSize={FS} fontWeight="900" fontFamily="system-ui" fill={col}>{d}</text>
+      </g>
+    );
+  }
+  function Op({sym,cx}){
+    return <text x={cx} y={midY+8} textAnchor="middle" fontSize={FS+4} fontWeight="900" fontFamily="system-ui" fill="#555">{sym}</text>;
+  }
+  const opX1=FW+OPW/2;                    // 60
+  const opEq=2*FW+OPW+OPW/2;             // 136
+  const opX2=3*FW+2*OPW+OPW/2;           // 212
+  return(
+    <div style={{display:"inline-block",marginBottom:8}}>
+      <svg width={totalW} height={svgH} style={{display:"block",overflow:"visible"}}>
+        <Fr n={n1} d={d1} col={C1} cx={xF1}/>
+        <Op sym="+" cx={opX1}/>
+        <Fr n={n2} d={d2} col={C2} cx={xF2}/>
+        <Op sym="=" cx={opEq}/>
+        <Fr n={en1} d={cd} col={C1} cx={xEF1}/>
+        <Op sym="+" cx={opX2}/>
+        <Fr n={en2} d={cd} col={C2} cx={xEF2}/>
+        {arc(xF1,topY,xEF1,topY,C1,fM1,true)}
+        {arc(xF1,botY,xEF1,botY,C1,fM1,false)}
+        {arc(xF2,topY,xEF2,topY,C2,fM2,true)}
+        {arc(xF2,botY,xEF2,botY,C2,fM2,false)}
+      </svg>
+      {hideAnswer
+        ?<div style={{fontSize:FS,fontWeight:900,color:"#bbb",fontFamily:"system-ui",marginTop:4}}>= ?</div>
+        :<div style={{fontSize:FS,fontWeight:900,fontFamily:"system-ui",marginTop:4,display:"flex",alignItems:"center",gap:6}}>
+          <span style={{color:"#555"}}>= </span>
+          <span style={{display:"inline-flex",flexDirection:"column",alignItems:"center",gap:1}}>
+            <span style={{fontSize:FS,fontWeight:900,color:"#555",fontFamily:"system-ui",lineHeight:1}}>{sumN}</span>
+            <span style={{display:"block",height:2.5,minWidth:20,background:"#555",borderRadius:2}}/>
+            <span style={{fontSize:FS,fontWeight:900,color:"#555",fontFamily:"system-ui",lineHeight:1}}>{cd}</span>
+          </span>
+          {ansStr!==sumN+"/"+cd&&<span style={{color:"#555"}}> = </span>}
+          {ansStr!==sumN+"/"+cd&&<span style={{fontSize:FS,fontWeight:900,color:"#27ae60",fontFamily:"system-ui"}}>{ansStr}</span>}
+        </div>
+      }
+    </div>
+  );
+}
+// Adding mixed numbers visual (topic 17)
+function FracMixedVisual({w1,n1,d1,w2,n2,d2,hideAnswer}){
+  const gcdF=function(a,b){return b===0?a:gcdF(b,a%b);};
+  const lcmF=function(a,b){return a*b/gcdF(a,b);};
+  const cd=lcmF(d1,d2),fM1=cd/d1,fM2=cd/d2,en1=n1*fM1,en2=n2*fM2;
+  const wSum=w1+w2,fSumN=en1+en2,wholeFromFrac=Math.floor(fSumN/cd),remN=fSumN%cd;
+  const totalW=wSum+wholeFromFrac;
+  const g=remN>0?gcdF(remN,cd):1,finalN=remN/g,finalD=cd/g;
+  const sameDenom=d1===d2;
+  const C1="#e74c3c",C2="#2980b9",FS=18;
+  function Fr({n,d,col}){
+    return(<span style={{display:"inline-flex",flexDirection:"column",alignItems:"center",gap:1,margin:"0 2px",verticalAlign:"middle"}}>
+      <span style={{fontSize:FS,fontWeight:900,color:col,fontFamily:"system-ui",lineHeight:1}}>{n}</span>
+      <span style={{display:"block",height:2.5,minWidth:String(Math.max(n,d)).length*10+8,background:col,borderRadius:2}}/>
+      <span style={{fontSize:FS,fontWeight:900,color:col,fontFamily:"system-ui",lineHeight:1}}>{d}</span>
+    </span>);
+  }
+  function Op({s}){return <span style={{fontSize:FS,fontWeight:900,color:"#555",fontFamily:"system-ui",margin:"0 4px",display:"inline-flex",alignItems:"center",lineHeight:1}}>{s}</span>;}
+  function Num({v,col}){return <span style={{fontSize:FS,fontWeight:900,color:col,fontFamily:"system-ui",lineHeight:1,display:"inline-flex",alignItems:"center"}}>{v}</span>;}
+  function Row({label,children}){return(<div style={{display:"flex",alignItems:"center",flexWrap:"nowrap",whiteSpace:"nowrap",marginBottom:8,minWidth:0}}><span style={{fontSize:12,fontWeight:700,color:"#555",fontFamily:"system-ui",marginRight:8,flexShrink:0}}>{label}</span><span style={{display:"inline-flex",alignItems:"center",gap:0,lineHeight:1}}>{children}</span></div>);}
+  const FW=44,OPW=32,PAD=38,fracH=FS*2+8,midY=PAD+fracH/2,topY=PAD+4,botY=PAD+fracH-4;
+  function arcSVG(xF1,xF2,xEF1,xEF2,fM1,fM2,totalSVGW){
+    function arc(x1,y1,x2,y2,col,label,above){
+      const cpY=above?Math.min(y1,y2)-32:Math.max(y1,y2)+32,mx=(x1+x2)/2;
+      const t=0.93,bx=(1-t)*(1-t)*x1+2*(1-t)*t*mx+t*t*x2,by=(1-t)*(1-t)*y1+2*(1-t)*t*cpY+t*t*y2;
+      const ang=Math.atan2(y2-by,x2-bx),hs=7;
+      const px1=x2-hs*Math.cos(ang-0.4),py1=y2-hs*Math.sin(ang-0.4);
+      const px2=x2-hs*Math.cos(ang+0.4),py2=y2-hs*Math.sin(ang+0.4);
+      const lx=mx,ly=above?cpY+7:cpY-7;
+      return(<g key={x1+"-"+above}>
+        <path d={"M"+x1+","+y1+" Q"+mx+","+cpY+" "+x2+","+y2} stroke={col} strokeWidth="2" fill="none"/>
+        <polygon points={x2+","+y2+" "+px1+","+py1+" "+px2+","+py2} fill={col}/>
+        <rect x={lx-13} y={ly-8} width="26" height="16" rx="3" fill={col}/>
+        <text x={lx} y={ly+4} textAnchor="middle" fontSize="10" fontWeight="900" fontFamily="system-ui" fill="#fff">{"x"+label}</text>
+      </g>);
+    }
+    return(<svg width={totalSVGW} height={PAD*2+fracH} style={{display:"block",overflow:"visible",marginBottom:4}}>
+      {arc(xF1,topY,xEF1,topY,C1,fM1,true)}
+      {arc(xF1,botY,xEF1,botY,C1,fM1,false)}
+      {arc(xF2,topY,xEF2,topY,C2,fM2,true)}
+      {arc(xF2,botY,xEF2,botY,C2,fM2,false)}
+    </svg>);
+  }
+  return(
+    <div style={{marginBottom:8}}>
+      <Row label="Whole numbers:"><Num v={w1} col="#7c3aed"/><Op s="+"/><Num v={w2} col="#7c3aed"/><Op s="="/><Num v={wSum} col="#7c3aed"/></Row>
+      {sameDenom?(
+        <Row label="Fractions:"><Fr n={n1} d={d1} col={C1}/><Op s="+"/><Fr n={n2} d={d2} col={C2}/><Op s="="/><Fr n={fSumN} d={cd} col="#555"/>{wholeFromFrac>0&&<><Op s="="/><Num v={wholeFromFrac} col="#555"/><span style={{fontSize:12,color:"#555",fontFamily:"system-ui",margin:"0 3px"}}>whole +</span><Fr n={remN} d={cd} col="#555"/></>}</Row>
+      ):(
+        <div style={{marginBottom:8}}>
+          <div style={{fontSize:12,fontWeight:700,color:"#555",fontFamily:"system-ui",marginBottom:4}}>Fractions:</div>
+          {(function(){
+            const xF1=FW/2,xF2=FW+OPW+FW/2,xEF1=2*(FW+OPW)+FW/2,xEF2=3*(FW+OPW)+FW/2;
+            const svgW=4*FW+3*OPW+8;
+            return(<div style={{display:"inline-flex",flexDirection:"column",alignItems:"flex-start"}}>
+              {arcSVG(xF1,xF2,xEF1,xEF2,fM1,fM2,svgW)}
+              <div style={{display:"inline-flex",alignItems:"center",gap:0,lineHeight:1,marginTop:-PAD+4}}>
+                <Fr n={n1} d={d1} col={C1}/><Op s="+"/><Fr n={n2} d={d2} col={C2}/>
+                <Op s="="/>
+                <Fr n={en1} d={cd} col={C1}/><Op s="+"/><Fr n={en2} d={cd} col={C2}/>
+                <Op s="="/><Fr n={fSumN} d={cd} col="#555"/>
+                {wholeFromFrac>0&&<><Op s="="/><Num v={wholeFromFrac} col="#555"/><span style={{fontSize:12,color:"#555",fontFamily:"system-ui",margin:"0 3px"}}>whole +</span><Fr n={remN} d={cd} col="#555"/></>}
+              </div>
+            </div>);
+          })()}
+        </div>
+      )}
+      <Row label="Answer:">{hideAnswer?<span style={{fontSize:FS,fontWeight:900,color:"#bbb",fontFamily:"system-ui"}}>?</span>:<><Num v={totalW} col="#7c3aed"/>{finalN>0&&<Fr n={finalN} d={finalD} col="#27ae60"/>}</> }</Row>
+    </div>
+  );
+}
+// Topic 18 — Subtracting fractions with simplification arrows
+function FracSubVisual({n1,d1,n2,d2,hideAnswer}){
+  const gcdF=function(a,b){return b===0?a:gcdF(b,a%b);};
+  const resN=n1-n2,resD=d1,g=gcdF(resN,resD),sN=resN/g,sD=resD/g;
+  const needsSimp=g>1;
+  const C1="#e74c3c",C2="#2980b9",CS="#27ae60",CD="#7c3aed",FS=18;
+  function Fr({n,d,col}){
+    return(<span style={{display:"inline-flex",flexDirection:"column",alignItems:"center",gap:1,margin:"0 2px",verticalAlign:"middle"}}>
+      <span style={{fontSize:FS,fontWeight:900,color:col,fontFamily:"system-ui",lineHeight:1}}>{n}</span>
+      <span style={{display:"block",height:2.5,minWidth:String(Math.max(n,d)).length*10+8,background:col,borderRadius:2}}/>
+      <span style={{fontSize:FS,fontWeight:900,color:col,fontFamily:"system-ui",lineHeight:1}}>{d}</span>
+    </span>);
+  }
+  function Op({s}){return <span style={{fontSize:FS,fontWeight:900,color:"#555",fontFamily:"system-ui",margin:"0 4px",display:"inline-flex",alignItems:"center",lineHeight:1}}>{s}</span>;}
+  function Row({label,children}){return(<div style={{display:"flex",alignItems:"center",flexWrap:"nowrap",whiteSpace:"nowrap",marginBottom:8}}><span style={{fontSize:11,fontWeight:700,color:"#555",fontFamily:"system-ui",marginRight:6,flexShrink:0}}>{label}</span><span style={{display:"inline-flex",alignItems:"center",gap:0,lineHeight:1}}>{children}</span></div>);}
+  // SVG-based simplification: both fractions inside SVG so arrows align exactly
+  const FW=48,OPW=40,PAD=40,FS_SVG=18;
+  const xFrom=FW/2;
+  const xTo=FW+OPW+FW/2;
+  const svgW=2*FW+OPW+8;
+  const fracH=FS_SVG*2+10;
+  const svgH=PAD*2+fracH;
+  const midY=PAD+fracH/2;
+  const lineY=midY+2;
+  const numY=midY-FS_SVG*0.5-3;
+  const denY=midY+FS_SVG*0.9+3;
+  const topY=PAD+2;
+  const botY=PAD+fracH-2;
+  function fracSVG(n,d,col,cx){
+    const lw=String(Math.max(n,d)).length*12+8;
+    return(<g>
+      <text x={cx} y={numY} textAnchor="middle" fontSize={FS_SVG} fontWeight="900" fontFamily="system-ui" fill={col}>{n}</text>
+      <line x1={cx-lw/2} y1={lineY} x2={cx+lw/2} y2={lineY} stroke={col} strokeWidth="2.5" strokeLinecap="round"/>
+      <text x={cx} y={denY} textAnchor="middle" fontSize={FS_SVG} fontWeight="900" fontFamily="system-ui" fill={col}>{d}</text>
+    </g>);
+  }
+  function arc(y,above){
+    const x1=xFrom,x2=xTo;
+    const cpY=above?y-34:y+34,mx=(x1+x2)/2;
+    const t=0.93,bx=(1-t)*(1-t)*x1+2*(1-t)*t*mx+t*t*x2,by=(1-t)*(1-t)*y+2*(1-t)*t*cpY+t*t*y;
+    const ang=Math.atan2(y-by,x2-bx),hs=7;
+    const px1=x2-hs*Math.cos(ang-0.4),py1=y-hs*Math.sin(ang-0.4);
+    const px2=x2-hs*Math.cos(ang+0.4),py2=y-hs*Math.sin(ang+0.4);
+    const lx=mx,ly=above?cpY+8:cpY-8;
+    return(<g key={"arc"+above}>
+      <path d={"M"+x1+","+y+" Q"+mx+","+cpY+" "+x2+","+y} stroke={CD} strokeWidth="2.5" fill="none"/>
+      <polygon points={x2+","+y+" "+px1+","+py1+" "+px2+","+py2} fill={CD}/>
+      <rect x={lx-15} y={ly-9} width="30" height="18" rx="4" fill={CD}/>
+      <text x={lx} y={ly+5} textAnchor="middle" fontSize="11" fontWeight="900" fontFamily="system-ui" fill="#fff">{"÷"+g}</text>
+    </g>);
+  }
+  const opCX=FW+OPW/2;
+  return(
+    <div style={{marginBottom:8}}>
+      <Row label="Subtract:"><Fr n={n1} d={d1} col={C1}/><Op s="−"/><Fr n={n2} d={d2} col={C2}/><Op s="="/><Fr n={resN} d={resD} col="#555"/></Row>
+      {needsSimp&&(
+        <div style={{marginBottom:8}}>
+          <div style={{fontSize:11,fontWeight:700,color:"#555",fontFamily:"system-ui",marginBottom:4}}>{"Simplify (÷"+g+" top and bottom):"}</div>
+          <svg width={svgW} height={svgH} style={{display:"block",overflow:"visible"}}>
+            {fracSVG(resN,resD,"#555",xFrom)}
+            <text x={opCX} y={midY+7} textAnchor="middle" fontSize={FS_SVG+4} fontWeight="900" fontFamily="system-ui" fill="#555">=</text>
+            {fracSVG(sN,sD,CS,xTo)}
+            {arc(topY,true)}
+            {arc(botY,false)}
+          </svg>
+        </div>
+      )}
+      <Row label="Answer:">{hideAnswer?<span style={{fontSize:FS,fontWeight:900,color:"#bbb",fontFamily:"system-ui"}}>?</span>:<Fr n={sN} d={sD} col={CS}/>}</Row>
+    </div>
+  );
+}
+// Topic 19 — Subtracting mixed numbers (both cases)
+function FracSubMixedVisual({w1,n1,d,w2,n2,borrowed,hideAnswer}){
+  const gcdF=function(a,b){return b===0?a:gcdF(b,a%b);};
+  const C1="#e74c3c",C2="#2980b9",CB="#e67e22",CS="#27ae60",FS=18;
+  function Fr({n,dn,col}){return(<span style={{display:"inline-flex",flexDirection:"column",alignItems:"center",gap:1,margin:"0 2px"}}><span style={{fontSize:FS,fontWeight:900,color:col,fontFamily:"system-ui",lineHeight:1}}>{n}</span><span style={{display:"block",height:2.5,minWidth:String(Math.max(n,dn)).length*10+8,background:col,borderRadius:2}}/><span style={{fontSize:FS,fontWeight:900,color:col,fontFamily:"system-ui",lineHeight:1}}>{dn}</span></span>);}
+  function Op({s}){return <span style={{fontSize:FS,fontWeight:900,color:"#555",fontFamily:"system-ui",margin:"0 4px",display:"inline-flex",alignItems:"center",lineHeight:1}}>{s}</span>;}
+  function Nm({v,col}){return <span style={{fontSize:FS,fontWeight:900,color:col,fontFamily:"system-ui",lineHeight:1,display:"inline-flex",alignItems:"center"}}>{v}</span>;}
+  function Row({label,children}){return(<div style={{marginBottom:8}}><div style={{fontSize:11,fontWeight:700,color:"#555",fontFamily:"system-ui",marginBottom:3}}>{label}</div><div style={{display:"inline-flex",alignItems:"center",flexWrap:"nowrap",whiteSpace:"nowrap",gap:0,lineHeight:1}}>{children}</div></div>);}
+  if(!borrowed){
+    const resW=w1-w2,resN=n1-n2,g=gcdF(resN,d),sN=resN/g,sD=d/g;
+    return(
+      <div style={{marginBottom:8}}>
+        <Row label="Step 1: Subtract the whole numbers."><Nm v={w1} col={C1}/><Op s="−"/><Nm v={w2} col={C2}/><Op s="="/><Nm v={resW} col="#555"/></Row>
+        <Row label="Step 2: Subtract the fractions."><Fr n={n1} dn={d} col={C1}/><Op s="−"/><Fr n={n2} dn={d} col={C2}/><Op s="="/><Fr n={resN} dn={d} col="#555"/></Row>
+        {g>1&&<Row label="Step 3: Simplify."><Fr n={resN} dn={d} col="#555"/><Op s="="/><Fr n={sN} dn={sD} col={CS}/></Row>}
+        <Row label="Answer:">{hideAnswer?<span style={{fontSize:18,fontWeight:900,color:"#bbb",fontFamily:"system-ui"}}>?</span>:<><Nm v={resW} col="#7c3aed"/>{resN>0&&<Fr n={g>1?sN:resN} dn={g>1?sD:d} col={CS}/>}</>}</Row>
+      </div>
+    );
+  }
+  const newW1=w1-1,newN1=n1+d,resW=newW1-w2,resN=newN1-n2,g=gcdF(resN,d),sN=resN/g,sD=d/g;
+  const cellW=32,svgH=90,midY=svgH/2,numY=midY-FS*0.7,denY=midY+FS*0.7,lineY=midY;
+  const xW1=cellW/2,xF1=cellW+8+cellW/2,xArr=xF1+cellW/2+20,xW2=xArr+20+cellW/2,xF2=xW2+cellW/2+8+cellW/2,totalW=xF2+cellW/2+8;
+  const ax1=xW1,ay1=midY+FS*0.5,ax2=xF2,ay2=numY-4;
+  const cpX=(ax1+ax2)/2,cpY=ay1+28;
+  const pathD="M"+ax1+","+ay1+" Q"+cpX+","+cpY+" "+ax2+","+ay2;
+  const t=0.93,bx=(1-t)*(1-t)*ax1+2*(1-t)*t*cpX+t*t*ax2,by=(1-t)*(1-t)*ay1+2*(1-t)*t*cpY+t*t*ay2;
+  const ang=Math.atan2(ay2-by,ax2-bx),hs=7;
+  const px1=ax2-hs*Math.cos(ang-0.4),py1=ay2-hs*Math.sin(ang-0.4);
+  const px2=ax2-hs*Math.cos(ang+0.4),py2=ay2-hs*Math.sin(ang+0.4);
+  const lx=cpX,ly=cpY+14;
+  return(
+    <div style={{marginBottom:8}}>
+      <Row label="Step 1: Subtract the whole numbers."><Nm v={w1} col={C1}/><Op s="−"/><Nm v={w2} col={C2}/><Op s="="/><Nm v={resW} col="#555"/></Row>
+      <div style={{marginBottom:8}}>
+        <div style={{fontSize:11,fontWeight:700,color:"#555",fontFamily:"system-ui",marginBottom:3}}>Step 2: The first fraction is smaller — exchange 1 whole for <span style={{color:CB}}>{d}/{d}</span>.</div>
+        <svg width={totalW} height={svgH} style={{display:"block",overflow:"visible"}}>
+          <text x={xW1} y={midY+FS*0.35} textAnchor="middle" fontSize={FS} fontWeight="900" fontFamily="system-ui" fill={C1}>{w1}</text>
+          <text x={xF1} y={numY+FS*0.35} textAnchor="middle" fontSize={FS} fontWeight="900" fontFamily="system-ui" fill={C1}>{n1}</text>
+          <line x1={xF1-12} y1={lineY} x2={xF1+12} y2={lineY} stroke={C1} strokeWidth="2.5" strokeLinecap="round"/>
+          <text x={xF1} y={denY+FS*0.35} textAnchor="middle" fontSize={FS} fontWeight="900" fontFamily="system-ui" fill={C1}>{d}</text>
+          <text x={xArr} y={midY+FS*0.35} textAnchor="middle" fontSize={FS} fontWeight="900" fontFamily="system-ui" fill="#555">→</text>
+          <text x={xW2} y={midY+FS*0.35} textAnchor="middle" fontSize={FS} fontWeight="900" fontFamily="system-ui" fill={CB}>{newW1}</text>
+          <text x={xF2} y={numY+FS*0.35} textAnchor="middle" fontSize={FS} fontWeight="900" fontFamily="system-ui" fill={CB}>{newN1}</text>
+          <line x1={xF2-14} y1={lineY} x2={xF2+14} y2={lineY} stroke={CB} strokeWidth="2.5" strokeLinecap="round"/>
+          <text x={xF2} y={denY+FS*0.35} textAnchor="middle" fontSize={FS} fontWeight="900" fontFamily="system-ui" fill={CB}>{d}</text>
+          <path d={pathD} stroke={CB} strokeWidth="2.5" fill="none"/>
+          <polygon points={ax2+","+ay2+" "+px1+","+py1+" "+px2+","+py2} fill={CB}/>
+          <rect x={lx-28} y={ly-9} width="56" height="18" rx="4" fill={CB}/>
+          <text x={lx} y={ly+5} textAnchor="middle" fontSize="10" fontWeight="900" fontFamily="system-ui" fill="#fff">+{d}/{d}=1</text>
+        </svg>
+      </div>
+      <Row label="Step 3: Now subtract the fractions."><Fr n={newN1} dn={d} col={CB}/><Op s="−"/><Fr n={n2} dn={d} col={C2}/><Op s="="/><Fr n={resN} dn={d} col="#555"/></Row>
+      {g>1&&<Row label="Step 4: Simplify."><Fr n={resN} dn={d} col="#555"/><Op s="="/><Fr n={sN} dn={sD} col={CS}/></Row>}
+      <Row label="Answer:">{hideAnswer?<span style={{fontSize:18,fontWeight:900,color:"#bbb",fontFamily:"system-ui"}}>?</span>:<><Nm v={resW} col="#7c3aed"/>{resN>0&&<Fr n={g>1?sN:resN} dn={g>1?sD:d} col={CS}/>}</>}</Row>
+    </div>
+  );
+}
+
+
+// Topic 21 — Dividing fraction by whole number
+function FracDivVisual({n,d,whole,newD,simpN,simpD,hideAnswer}){
+  const C1="#e74c3c",C2="#2980b9",CP="#7c3aed",CS="#27ae60",FS=18;
+  function Fr({num,den,col}){return(<span style={{display:"inline-flex",flexDirection:"column",alignItems:"center",gap:1,margin:"0 3px"}}><span style={{fontSize:FS,fontWeight:900,color:col,fontFamily:"system-ui",lineHeight:1}}>{num}</span><span style={{display:"block",height:2.5,minWidth:String(Math.max(num,den)).length*11+8,background:col,borderRadius:2}}/><span style={{fontSize:FS,fontWeight:900,color:col,fontFamily:"system-ui",lineHeight:1}}>{den}</span></span>);}
+  function Op({s}){return <span style={{fontSize:FS,fontWeight:900,color:"#555",fontFamily:"system-ui",margin:"0 4px",display:"inline-flex",alignItems:"center",lineHeight:1}}>{s}</span>;}
+  function Nm({v,col}){return <span style={{fontSize:FS,fontWeight:900,color:col,fontFamily:"system-ui",lineHeight:1,display:"inline-flex",alignItems:"center"}}>{v}</span>;}
+  function Row({label,children}){return(<div style={{marginBottom:8}}><div style={{fontSize:11,fontWeight:700,color:"#555",fontFamily:"system-ui",marginBottom:3}}>{label}</div><div style={{display:"inline-flex",alignItems:"center",flexWrap:"nowrap",whiteSpace:"nowrap",gap:0,lineHeight:1}}>{children}</div></div>);}
+  const needsSimp=simpN!==n||simpD!==newD;
+  return(
+    <div style={{marginBottom:8}}>
+      <Row label="Keep the numerator:"><Nm v={n} col={C1}/><Op s="stays as"/><Nm v={n} col={C1}/></Row>
+      <Row label="Multiply the denominator:"><Nm v={d} col={C2}/><Op s="×"/><Nm v={whole} col={CP}/><Op s="="/><Nm v={newD} col={C2}/></Row>
+      <Row label="Result:"><Fr num={n} den={d} col="#aaa"/><Op s="÷"/><Nm v={whole} col={CP}/><Op s="="/>{hideAnswer?<span style={{fontSize:18,fontWeight:900,color:"#bbb",fontFamily:"system-ui"}}>?</span>:<Fr num={n} den={newD} col={needsSimp?"#555":CS}/>}</Row>
+      {needsSimp&&!hideAnswer&&<Row label="Simplified:"><Fr num={n} den={newD} col="#555"/><Op s="="/><Fr num={simpN} den={simpD} col={CS}/></Row>}
+    </div>
+  );
+}
+
+// Topic 22/23 — Decimal column layout (add or sub) using existing ColHintDecSub style but for dec+dec
+function DecimalColVisual({top,bot,answer,op,hideAnswer}){
+  const PC=["#c0392b","#2980b9","#27ae60","#7c3aed"];
+  const PL=["1/10","O","T","H"];
+  const SLOTS=[{pos:2,li:3},{pos:1,li:2},{pos:0,li:1},{pos:"dot"},{pos:-1,li:0}];
+  const CW=30,DW=12,SW=28;
+  function getDigit(n,pos){
+    const s=n.toFixed(1);const parts=s.split(".");
+    const int=parts[0],dec=parts[1]||"0";
+    if(pos===-1)return dec[0]||"0";
+    const fr=int.length-1-pos;
+    return(fr<0||fr>=int.length)?null:int[fr];
+  }
+  // Compute exchanges for subtraction
+  const exchFrom=[false,false,false],exchTo=[false,false,false];
+  if(op==="sub"){
+    const tS=top.toFixed(1).replace(".","").split("").map(Number);
+    const bS=bot.toFixed(1).replace(".","").split("").map(Number);
+    while(tS.length<bS.length)tS.unshift(0);
+    while(bS.length<tS.length)bS.unshift(0);
+    const tW=[...tS];
+    for(let i=tW.length-1;i>=0;i--){
+      if(tW[i]<bS[i]){
+        tW[i]+=10;
+        for(let j=i-1;j>=0;j--){
+          if(tW[j]>0){tW[j]-=1;break;}
+        }
+      }
+    }
+  }
+  function hdrRow(n){
+    return(
+      <div style={{display:"flex",alignItems:"center",marginBottom:4}}>
+        <div style={{width:SW,flexShrink:0}}/>
+        {SLOTS.map(function(sl,i){
+          if(sl.pos==="dot")return<div key={i} style={{width:DW,flexShrink:0}}/>;
+          const d=getDigit(n,sl.pos);
+          if(d===null)return<div key={i} style={{width:CW,flexShrink:0}}/>;
+          const col=PC[sl.li];
+          return<div key={i} style={{width:CW,height:20,background:col,borderRadius:4,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:900,color:"#fff",flexShrink:0}}>{PL[sl.li]}</div>;
+        })}
+      </div>
+    );
+  }
+  function numRow(n,sym,hideAns,isAns){
+    return(
+      <div style={{display:"flex",alignItems:"center",marginBottom:2}}>
+        <div style={{width:SW,textAlign:"right",fontSize:18,fontWeight:800,color:"#333",flexShrink:0,paddingRight:4}}>{sym}</div>
+        {SLOTS.map(function(sl,i){
+          if(sl.pos==="dot")return<div key={i} style={{width:DW,flexShrink:0,textAlign:"center",fontSize:20,fontWeight:900,color:"#555"}}>.</div>;
+          const d=getDigit(n,sl.pos);
+          const blank=d===null;
+          const col=PC[sl.li];
+          const disp=(hideAns&&isAns)?"?":(blank?"":d);
+          const clr=(hideAns&&isAns)?"#bbb":(blank?"transparent":col);
+          return<div key={i} style={{width:CW,height:38,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,fontWeight:900,color:clr}}>{disp}</div>;
+        })}
+      </div>
+    );
+  }
+  // Carries for addition
+  function carriesRow(t,b){
+    const tS=String(Math.round(t*10)).split("").map(Number);
+    const bS=String(Math.round(b*10)).split("").map(Number);
+    while(tS.length<bS.length)tS.unshift(0);
+    while(bS.length<tS.length)bS.unshift(0);
+    const carries=new Array(tS.length).fill(0);
+    let c=0;
+    for(let i=tS.length-1;i>=0;i--){
+      const s=tS[i]+bS[i]+c;c=Math.floor(s/10);
+      if(i>0)carries[i-1]=c;c=Math.floor(s/10);
+    }
+    const hasCar=carries.some(function(x){return x>0;});
+    if(!hasCar)return null;
+    return(
+      <div style={{display:"flex",alignItems:"center"}}>
+        <div style={{width:SW,flexShrink:0}}/>
+        {SLOTS.map(function(sl,i){
+          if(sl.pos==="dot")return<div key={i} style={{width:DW,flexShrink:0}}/>;
+          // map slot position to carry array index
+          const d=getDigit(top,sl.pos);
+          const col=PC[sl.li];
+          // carries indexed from right of integer portion; pos 0=ones, -1=tenths
+          // carry at pos p comes from pos p-1 (one to right)
+          // for decimal: tenths=pos-1 (index 0 of *10 representation), ones=index1, tens=index2
+          const carryIdx=sl.pos===-1?0:sl.pos===0?1:sl.pos===1?2:sl.pos===2?3:-1;
+          const cv=carryIdx>=0&&carryIdx<carries.length?carries[carryIdx]:0;
+          return<div key={i} style={{width:CW,height:16,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:900,color:cv?col:"transparent"}}>{cv||""}</div>;
+        })}
+      </div>
+    );
+  }
+  const opSym=op==="add"?"+":"−";
+  return(
+    <div style={{display:"inline-block",background:"#fff",borderRadius:8,padding:"8px 10px",border:"2px solid #e5e7eb",marginBottom:8}}>
+      {hdrRow(top)}
+      {numRow(top,"",false,false)}
+      {numRow(bot,opSym,false,false)}
+      <div style={{borderTop:"3px solid #222",margin:"2px 0",marginLeft:SW}}/>
+      {numRow(answer,"",hideAnswer,true)}
+      {op==="add"&&(
+        <>
+          <div style={{borderTop:"2px solid #aaa",margin:"1px 0",marginLeft:SW}}/>
+          {carriesRow(top,bot)}
+        </>
+      )}
+    </div>
+  );
+}
+
+
+// ── Division dual explanation (bus stop + DMSB long division) ─────────────────
+function DivisionExplanation({dividend,divisor,hideAnswer}){
+  if(!dividend||!divisor||divisor===0)return null;
+  const quotient=Math.floor(dividend/divisor);
+  const finalRem=dividend%divisor;
+  const dvdStr=String(dividend);
+  const n=dvdStr.length;
+  // Compute steps: divide each digit in turn
+  const steps=[];let cur=0;
+  for(let i=0;i<n;i++){
+    cur=cur*10+parseInt(dvdStr[i]);
+    const q=Math.floor(cur/divisor);
+    const mult=q*divisor;
+    const rem=cur-mult;
+    steps.push({cur,q,mult,rem,col:i});
+    cur=rem;
+  }
+  const dw=28,dh=34,bw="3px",bc="#222";
+  const stepBadge=function(letter,bg,col){return(<span style={{borderRadius:5,minWidth:22,padding:"1px 5px",fontSize:"0.65rem",fontWeight:900,background:bg,color:col,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{letter}</span>);};
+  return(
+    <div style={{marginTop:12,fontFamily:"system-ui,sans-serif"}}>
+      <p style={{textAlign:"center",color:"#555",fontSize:"0.85rem",fontWeight:700,marginBottom:12}}>Here are two methods — use whichever you prefer!</p>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+        {/* BUS STOP */}
+        <div style={{borderRadius:12,padding:"14px 12px 16px",background:"#fff8e6",border:"2px solid #f5c842",display:"flex",flexDirection:"column",alignItems:"center"}}>
+          <div style={{fontSize:"0.72rem",fontWeight:900,textTransform:"uppercase",letterSpacing:1,marginBottom:4,padding:"3px 10px",borderRadius:20,background:"#f5c842",color:"#7a5000"}}>🚌 Bus Stop</div>
+          <div style={{fontSize:"0.7rem",color:"#92400e",fontWeight:700,marginBottom:12,textAlign:"center",fontStyle:"italic"}}>Tip: write out multiples of {divisor} first!</div>
+          <div style={{display:"inline-flex",alignItems:"flex-end",lineHeight:1}}>
+            <div style={{fontSize:"1.1rem",fontWeight:800,color:"#4a2fa8",height:dh,display:"flex",alignItems:"center",marginRight:4}}>{divisor}</div>
+            <div style={{display:"flex",flexDirection:"column"}}>
+              <div style={{display:"flex",paddingLeft:6}}>
+                {steps.map(function(s,i){return(<div key={i} style={{width:dw,height:dh,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"1.1rem",fontWeight:800,color:"#1a1a1a"}}>{s.q}</div>);})}
+              </div>
+              <div style={{display:"flex",borderTop:bw+" solid "+bc,borderLeft:bw+" solid "+bc,paddingTop:2,paddingLeft:5}}>
+                {dvdStr.split("").map(function(d,i){
+                  const prevRem=i===0?0:steps[i-1].rem;
+                  return(<div key={i} style={{width:dw,height:dh,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"1.1rem",fontWeight:800,color:"#c45000",position:"relative"}}>
+                    {prevRem>0&&<span style={{position:"absolute",top:1,left:1,fontSize:"0.5rem",fontWeight:900,color:"#e05a00",lineHeight:1}}>{prevRem}</span>}
+                    {d}
+                  </div>);
+                })}
+              </div>
+            </div>
+          </div>
+          <div style={{marginTop:12,width:"100%",fontSize:"0.75rem",fontWeight:700,color:"#333",display:"flex",flexDirection:"column",gap:5}}>
+            {steps.map(function(s,i){return(<div key={i} style={{display:"flex",alignItems:"flex-start",gap:5}}>
+              {stepBadge("D","#fde68a","#78350f")}
+              <span>{s.cur} ÷ {divisor} = <b>{s.q}</b>{s.rem>0?<>, rem <b style={{color:"#e05a00"}}>{s.rem}</b> — carry</>:<> — done!</>}</span>
+            </div>);})}
+          </div>
+          {!hideAnswer&&<div style={{marginTop:10,background:"#d4edda",border:"2px solid #4caf50",borderRadius:7,padding:"4px 14px",fontSize:"0.85rem",fontWeight:900,color:"#1a5c2a"}}>✅ Answer = {quotient}{finalRem>0?" remainder "+finalRem:""}</div>}
+        </div>
+        {/* LONG DIVISION */}
+        <div style={{borderRadius:12,padding:"14px 12px 16px",background:"#e8f5ff",border:"2px solid #5aade8",display:"flex",flexDirection:"column",alignItems:"center"}}>
+          <div style={{fontSize:"0.72rem",fontWeight:900,textTransform:"uppercase",letterSpacing:1,marginBottom:4,padding:"3px 10px",borderRadius:20,background:"#5aade8",color:"#003d6b"}}>📐 Long Division (DMSB)</div>
+          <div style={{fontSize:"0.7rem",color:"#1e3a8a",fontWeight:700,marginBottom:12,textAlign:"center",fontStyle:"italic"}}>Divide, Multiply, Subtract, Bring down — repeat!</div>
+          <div style={{display:"inline-flex",alignItems:"flex-start",lineHeight:1}}>
+            {/* Divisor: pushed down exactly one row (past quotient) via flex column */}
+            <div style={{display:"flex",flexDirection:"column"}}>
+              <div style={{height:dh}}/>
+              <div style={{height:dh,display:"flex",alignItems:"center",paddingRight:5,borderRight:bw+" solid "+bc,fontSize:"1.1rem",fontWeight:800,color:"#4a2fa8"}}>{divisor}</div>
+            </div>
+            {/* Quotient + bracketed content */}
+            <div style={{display:"flex",flexDirection:"column"}}>
+              <div style={{display:"flex",paddingLeft:4}}>
+                {steps.map(function(s,i){return(<div key={i} style={{width:dw,height:dh,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"1.1rem",fontWeight:800,color:"#c00"}}>{s.q}</div>);})}
+              </div>
+              {/* borderTop+borderLeft on SAME element = proper right-angle corner */}
+              <div style={{borderTop:bw+" solid "+bc,paddingLeft:4}}>
+                <div style={{display:"flex"}}>
+                  {dvdStr.split("").map(function(d,i){return(<div key={i} style={{width:dw,height:dh,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"1.1rem",fontWeight:800,color:"#333"}}>{d}</div>);})}
+                </div>
+                <div>
+                  {steps.map(function(s,i){
+                    const mStr=String(s.mult);
+                    const mLeft=Math.max(0,s.col-mStr.length+1);
+                    const remStr=String(s.rem);
+                    const remLeft=s.rem>0?Math.max(0,s.col-remStr.length+1):s.col+1;
+                    return(<div key={i}>
+                      {/* Subtract row: marginLeft:-16 pulls minus sign left so digits align */}
+                      <div style={{display:"flex",alignItems:"center",marginLeft:-16}}>
+                        <span style={{width:16,textAlign:"center",color:"#0057b7",fontWeight:800,fontSize:"0.9rem",flexShrink:0}}>−</span>
+                        {Array(mLeft).fill(null).map(function(_,j){return<div key={j} style={{width:dw,height:dh}}/>;}) }
+                        {mStr.split("").map(function(d,j){return(<div key={j} style={{width:dw,height:dh,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"1.1rem",fontWeight:800,color:"#0057b7"}}>{d}</div>);})}
+                      </div>
+                      <div style={{height:2,background:"#aaa",marginLeft:mLeft*dw,width:mStr.length*dw}}/>
+                      {/* Bring-down row (not last step) */}
+                      {i<steps.length-1&&(
+                        <div style={{display:"flex"}}>
+                          {Array(remLeft).fill(null).map(function(_,j){return<div key={j} style={{width:dw,height:dh}}/>;}) }
+                          {s.rem>0&&remStr.split("").map(function(d,j){return(<div key={j} style={{width:dw,height:dh,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"1.1rem",fontWeight:800}}>{d}</div>);})}
+                          <div style={{width:dw,height:dh,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"1.1rem",fontWeight:800,color:"#e05a00"}}>{dvdStr[i+1]}</div>
+                        </div>
+                      )}
+                      {/* Final remainder */}
+                      {i===steps.length-1&&(
+                        <div style={{display:"flex"}}>
+                          {Array(remLeft).fill(null).map(function(_,j){return<div key={j} style={{width:dw,height:dh}}/>;}) }
+                          {remStr.split("").map(function(d,j){return(<div key={j} style={{width:dw,height:dh,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"1.1rem",fontWeight:800,color:"#2a7a00"}}>{d}</div>);})}
+                        </div>
+                      )}
+                    </div>);
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style={{marginTop:12,width:"100%",fontSize:"0.73rem",fontWeight:700,color:"#333",display:"flex",flexDirection:"column",gap:4}}>
+            {steps.map(function(s,i){
+              const items=[
+                <div key={"d"+i} style={{display:"flex",alignItems:"flex-start",gap:5}}>{stepBadge("D","#fde68a","#78350f")}<span>How many times does {divisor} go into {s.cur}? → <b>{s.q}</b></span></div>,
+                <div key={"m"+i} style={{display:"flex",alignItems:"flex-start",gap:5}}>{stepBadge("M","#bbf7d0","#14532d")}<span>{s.q} × {divisor} = <b>{s.mult}</b></span></div>,
+                <div key={"s"+i} style={{display:"flex",alignItems:"flex-start",gap:5}}>{stepBadge("S","#bfdbfe","#1e3a8a")}<span>{s.cur} − {s.mult} = <b>{s.rem}</b></span></div>
+              ];
+              if(i<steps.length-1)items.push(<div key={"b"+i} style={{display:"flex",alignItems:"flex-start",gap:5}}>{stepBadge("B","#fce7f3","#831843")}<span>Bring down the <b>{dvdStr[i+1]}</b> → <b>{(s.rem>0?String(s.rem):"")+dvdStr[i+1]}</b></span></div>);
+              return items;
+            })}
+          </div>
+          <div style={{marginTop:6,fontSize:"0.65rem",color:"#666",fontWeight:700}}>D=Divide · M=Multiply · S=Subtract · B=Bring down</div>
+          {!hideAnswer&&<div style={{marginTop:8,background:"#d4edda",border:"2px solid #4caf50",borderRadius:7,padding:"4px 14px",fontSize:"0.85rem",fontWeight:900,color:"#1a5c2a"}}>✅ Answer = {quotient}{finalRem>0?" remainder "+finalRem:""}</div>}
+        </div>
+      </div>
+      <div style={{marginTop:10,background:"#f3f0ff",borderRadius:8,padding:"8px 12px",fontSize:"0.78rem",color:"#5a3fa8",fontWeight:700,textAlign:"center"}}>💡 Both methods give the same answer — use whichever your teacher prefers!</div>
+    </div>
+  );
+}
+
+function NoteBox({exp,showExample,dynamicHint,dynamicTip}){
+  return(
+    <div style={{background:"#fffef5",border:"1px solid #d1a054",borderRadius:8,padding:"12px 14px",marginBottom:8,fontFamily:"Georgia,serif"}}>
+      <div style={{fontSize:16,fontWeight:700,marginBottom:4,color:"#1a3a6e"}}>{exp.title}</div>
+      <div style={{fontSize:14,lineHeight:1.6,whiteSpace:"pre-wrap",marginBottom:4}}>{exp.text}</div>
+      {dynamicHint&&<div style={{fontFamily:"monospace",fontSize:13,background:"#fff",borderRadius:4,padding:"6px 10px",whiteSpace:"pre-wrap",border:"2px solid "+C.primary,marginBottom:4,color:"#1a3a6e"}}><strong>This question:</strong>{"\n"}{dynamicHint}</div>}
+      {!dynamicHint&&showExample&&exp.example&&<div style={{fontFamily:"monospace",fontSize:13,background:"rgba(255,255,255,0.8)",borderRadius:4,padding:"4px 8px",whiteSpace:"pre-wrap",border:"1px solid #e8c9a0",marginBottom:4,display:"inline-block"}}>{exp.example}</div>}
+      {(dynamicTip||exp.tip)&&<div style={{fontSize:13,color:"#b45309",marginTop:4}}>Tip: {dynamicTip||exp.tip}</div>}
+    </div>
+  );
+}
+function WorkingArea({height,children}){
+  return(
+    <div style={{position:"relative",width:"100%",height:height||160,overflow:"hidden",borderTop:"1px solid #ccc",background:"#fff"}}>
+      <svg style={{position:"absolute",inset:0,width:"100%",height:"100%",pointerEvents:"none"}} preserveAspectRatio="none">
+        <defs><pattern id="sq" x="0" y="0" width="14" height="14" patternUnits="userSpaceOnUse"><path d="M 14 0 L 0 0 0 14" fill="none" stroke="#e8a0a0" strokeWidth="0.7"/></pattern></defs>
+        <rect width="100%" height="100%" fill="#fff"/>
+        <rect width="100%" height="100%" fill="url(#sq)"/>
+      </svg>
+      <div style={{position:"relative",zIndex:1,width:"100%",height:"100%"}}>{children}</div>
+    </div>
+  );
+}
+function QuestionCard({q,qNum,inputRef,ansValue,onAnsChange,onSubmit,submitted,isCorrect,children}){
+  const isTwoMark=q.isTwoMark||TWO_MARK.has(q.topic);const marks=isTwoMark?2:1;
+  const qDisplay=<span style={{fontSize:20,fontWeight:700,fontFamily:"monospace"}}>{renderMath(q.question,"0.85em")}</span>;
+  return(
+    <div style={{border:"2px solid "+C.text,borderRadius:4,overflow:"hidden",background:C.white}}>
+      <div style={{display:"flex",minHeight:56}}>
+        <div style={{width:52,flexShrink:0,borderRight:"2px solid "+C.text,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-start",paddingTop:10}}>
+          <span style={{fontWeight:900,fontSize:18,color:C.satsBlue,fontFamily:"system-ui"}}>{qNum}</span>
+          {isTwoMark&&<span style={{fontSize:9,color:C.textL,fontWeight:700,marginTop:4,textAlign:"center",lineHeight:1.2}}>Show{"\n"}method</span>}
+        </div>
+        <div style={{flex:1,padding:"10px 14px",display:"flex",alignItems:"center"}}>
+          {q.leftBox?<div style={{display:"flex",alignItems:"center",gap:10}}><input ref={inputRef} value={ansValue} onChange={onAnsChange} onKeyDown={function(e){if(e.key==="Enter")onSubmit();}} readOnly={submitted} style={{width:90,height:40,border:"2.5px solid "+C.satsBlue,borderRadius:3,textAlign:"center",fontSize:20,fontWeight:700,fontFamily:"monospace",outline:"none",background:submitted?(isCorrect?"#dcfce7":"#fee2e2"):"#fff"}}/><span style={{fontSize:20,fontWeight:700,fontFamily:"monospace"}}>{renderMath(q.question.replace("= ",""),"0.85em")}</span></div>:qDisplay}
+        </div>
+        <div style={{width:52,flexShrink:0,borderLeft:"2px solid "+C.text,background:C.satsMark,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-end",paddingBottom:8}}>
+          <div style={{width:34,height:34,border:"2px solid "+C.text,background:"#fff",borderRadius:2,marginBottom:4}}/>
+          <span style={{fontSize:10,fontWeight:700,textAlign:"center"}}>{marks} mark{marks>1?"s":""}</span>
+        </div>
+      </div>
+      <WorkingArea height={isTwoMark?220:160}>
+        {!q.leftBox&&(<div style={{position:"absolute",bottom:10,right:62,zIndex:2}}><input ref={inputRef} value={ansValue} onChange={onAnsChange} onKeyDown={function(e){if(e.key==="Enter")onSubmit();}} readOnly={submitted} style={{width:120,height:44,border:"2.5px solid "+C.satsBlue,borderRadius:3,textAlign:"center",fontSize:20,fontWeight:700,fontFamily:"monospace",outline:"none",background:submitted?(isCorrect?"#dcfce7":"#fee2e2"):"#fff",display:"block"}}/></div>)}
+      </WorkingArea>
+      {children}
+    </div>
+  );
+}
+function LineGraph({papers,onClickPaper}){
+  if(!papers||papers.length===0)return <p style={{color:C.textL,textAlign:"center",padding:20,fontSize:14}}>No full papers completed yet!</p>;
+  const W=500,H=200,pl=52,pr=24,pt=24,pb=56;const pw=W-pl-pr,ph=H-pt-pb;
+  const pts=papers.map(function(p,i){return{x:pl+(papers.length===1?pw/2:i*(pw/(papers.length-1))),y:pt+ph-(p.score/40)*ph,score:p.score,date:p.date,i:i};});
+  const pathD=pts.map(function(p,i){return(i===0?"M":"L")+p.x.toFixed(1)+","+p.y.toFixed(1);}).join(" ");
+  return(
+    <div style={{overflowX:"auto"}}>
+      <svg viewBox={"0 0 "+W+" "+H} style={{width:"100%",maxWidth:W,display:"block",margin:"0 auto"}}>
+        {[0,10,20,30,40].map(function(v){const y=pt+ph-(v/40)*ph;return <g key={v}><line x1={pl} y1={y} x2={W-pr} y2={y} stroke="#e5e7eb" strokeWidth={1}/><text x={pl-8} y={y+4} textAnchor="end" fontSize={10} fill={C.textL}>{v}</text></g>;})}
+        {pts.length>1&&<path d={pathD} fill="none" stroke={C.primary} strokeWidth={2.5} strokeLinejoin="round"/>}
+        {pts.map(function(p,idx){return(<g key={idx} style={{cursor:onClickPaper?"pointer":"default"}} onClick={function(){if(onClickPaper)onClickPaper(p.i);}}><circle cx={p.x} cy={p.y} r={onClickPaper?7:5} fill={C.primary} stroke="#fff" strokeWidth={2}/><text x={p.x} y={p.y-11} textAnchor="middle" fontSize={11} fontWeight="bold" fill={C.primary}>{p.score}</text><text x={p.x} y={H-pb+16} textAnchor="middle" fontSize={9} fill={C.textL}>Attempt {idx+1}</text><text x={p.x} y={H-pb+28} textAnchor="middle" fontSize={8} fill={C.textL}>({p.date})</text></g>);})}
+        <line x1={pl} y1={pt} x2={pl} y2={pt+ph} stroke="#9ca3af" strokeWidth={1.5}/>
+        <line x1={pl} y1={pt+ph} x2={W-pr} y2={pt+ph} stroke="#9ca3af" strokeWidth={1.5}/>
+      </svg>
+    </div>
+  );
+}
+
+// ── Review ────────────────────────────────────────────────────────────────────
+function ReviewFlow({mistakes,onDone}){
+  const[idx,setIdx]=useState(0);const[stage,setStage]=useState(1);const[ans,setAns]=useState("");const[checked,setChecked]=useState(false);const[wasCorrect,setWasCorrect]=useState(false);
+  if(!mistakes||mistakes.length===0){return(<div style={{minHeight:"100vh",background:C.grayL,display:"flex",alignItems:"center",justifyContent:"center",padding:20,fontFamily:"system-ui"}}><Card style={{textAlign:"center",maxWidth:400,padding:40}}><div style={{fontSize:56}}>🎉</div><h2>No mistakes to review!</h2><Btn onClick={onDone}>Back to Dashboard</Btn></Card></div>);}
+  const m=mistakes[idx],exp=getExp(m.topic),total=mistakes.length,videos=YT[m.topic]||[];
+  const checkAns=function(){setWasCorrect(answersMatch(ans,m.answer,m.isText));setChecked(true);};
+  const nextQ=function(){if(idx<total-1){setIdx(function(i){return i+1;});setStage(1);setAns("");setChecked(false);setWasCorrect(false);}else onDone();};
+  const tryAgain=function(){setStage(function(s){return Math.min(s+1,3);});setAns("");setChecked(false);setWasCorrect(false);};
+  return(
+    <div style={{minHeight:"100vh",background:C.grayL,fontFamily:"system-ui",padding:20}}>
+      <div style={{maxWidth:640,margin:"0 auto"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+          <span style={{color:C.textL,fontSize:14,fontWeight:600}}>Mistake {idx+1} of {total}</span>
+          <Btn onClick={onDone} color={C.grayL} textColor={C.text} style={{padding:"6px 14px",fontSize:13}}>Exit Review</Btn>
+        </div>
+        <PBar pct={(idx/total)*100} color={C.primary}/>
+        <Card style={{marginTop:14}}>
+          <div style={{display:"flex",gap:6,marginBottom:14}}>{[1,2,3].map(function(s){return <div key={s} style={{flex:1,height:5,borderRadius:99,background:s<=stage?C.primary:"#e5e7eb"}}/>;})}</div>
+          <div style={{fontSize:11,color:C.textL,marginBottom:6,fontWeight:600}}>{stage===1?"Hint — try again!":stage===2?"Step-by-step guide":"Full solution"}</div>
+          <div style={{fontSize:12,color:C.primary,fontWeight:700,marginBottom:8}}>{TOPIC_NAMES[m.topic]}</div>
+          <div style={{border:"2px solid "+C.text,borderRadius:4,marginBottom:14,padding:"10px 14px",fontSize:18,fontWeight:700,fontFamily:"monospace"}}>{renderMath(m.question,"0.9em")}</div>
+          {stage===1&&<NoteBox exp={{title:exp.title,text:exp.hint1,tip:exp.tip}} showExample={false} dynamicTip={m.divHint?"Write out multiples of "+m.divHint.divisor+" first!":null}/>}
+          {stage===2&&(<div>{m.colHint?<CombinedHintBox exp={{title:"Step-by-step",text:exp.hint2,example:exp.example,tip:""}} colHint={m.colHint} hideAnswer={true}/>:m.pvHint?<ColHintPlaceValue {...m.pvHint}/>:m.decHint?<ColHintDecSub {...m.decHint} hideAnswer={true}/>:m.pvGridHint?<PlaceValueGrid {...m.pvGridHint} showArrows={true}/>:m.sdHint?<ColHintShortDiv {...m.sdHint} hideAnswer={true}/>:m.fracAddHint?<FracAddVisual {...m.fracAddHint} hideAnswer={true}/>:m.fracMixedHint?<FracMixedVisual {...m.fracMixedHint} hideAnswer={true}/>:m.fracSubHint?<FracSubVisual {...m.fracSubHint} hideAnswer={true}/>:m.fracSubMixedHint?<FracSubMixedVisual {...m.fracSubMixedHint} hideAnswer={true}/>:m.fracDivHint?<FracDivVisual {...m.fracDivHint} hideAnswer={true}/>:m.decColHint?<DecimalColVisual {...m.decColHint} hideAnswer={true}/>:m.divHint?null:<NoteBox exp={{title:"Step-by-step",text:exp.hint2,example:exp.example,tip:""}} showExample={true} dynamicHint={m.dynamicHint}/>}{m.divHint&&<DivisionExplanation dividend={m.divHint.dividend} divisor={m.divHint.divisor} hideAnswer={true}/>}</div>)}
+          {stage===3&&(<div><div style={{background:C.greenL,borderRadius:8,padding:14,marginBottom:12}}><div style={{fontWeight:700,color:C.green,marginBottom:6,fontSize:18}}>Answer: {renderMath(String(m.answer),"0.9em")}</div>{m.colHint&&<div style={{marginBottom:6}}>{renderColHint(m.colHint)}</div>}{m.pvGridHint&&<div style={{marginBottom:6}}><PlaceValueGrid {...m.pvGridHint} showArrows={false}/></div>}{m.sdHint&&<div style={{marginBottom:6}}><ColHintShortDiv {...m.sdHint} hideAnswer={false}/></div>}{m.fracAddHint&&<FracAddVisual {...m.fracAddHint}/>}{m.fracMixedHint&&<FracMixedVisual {...m.fracMixedHint}/>}{m.fracSubHint&&<FracSubVisual {...m.fracSubHint}/>}{m.fracSubMixedHint&&<FracSubMixedVisual {...m.fracSubMixedHint}/>}{m.fracDivHint&&<FracDivVisual {...m.fracDivHint}/>}{m.decColHint&&<DecimalColVisual {...m.decColHint}/>}{!m.colHint&&!m.pvGridHint&&!m.sdHint&&!m.fracAddHint&&!m.fracMixedHint&&!m.fracSubHint&&!m.fracSubMixedHint&&!m.fracDivHint&&!m.decColHint&&m.dynamicHint&&<div style={{fontFamily:"monospace",fontSize:13,whiteSpace:"pre-wrap",background:"#fff",padding:8,borderRadius:6,border:"2px solid "+C.primary}}>{m.dynamicHint}</div>}{!m.colHint&&!m.dynamicHint&&m.working&&<div style={{fontFamily:"monospace",fontSize:13,whiteSpace:"pre-wrap",background:"#fff",padding:8,borderRadius:6}}>{m.working}</div>}</div>{m.divHint&&<DivisionExplanation dividend={m.divHint.dividend} divisor={m.divHint.divisor}/>}{videos.map(function(v,i){return <a key={i} href={v.url} target="_blank" rel="noreferrer" style={{display:"block",background:"#ef4444",color:"#fff",borderRadius:8,padding:"8px 14px",textDecoration:"none",fontWeight:700,fontSize:13,marginBottom:6}}>▶ Watch: {v.label}</a>;})} <Btn onClick={nextQ} style={{width:"100%",marginTop:4}}>{idx<total-1?"Next Mistake":"Finish Review"}</Btn></div>)}
+          {stage<3&&!checked&&(<div style={{display:"flex",gap:8,marginTop:8}}><input value={ans} onChange={function(e){setAns(e.target.value);}} onKeyDown={function(e){if(e.key==="Enter")checkAns();}} placeholder="Your answer..." autoFocus style={{flex:1,border:"2px solid "+C.primary,borderRadius:8,padding:"10px 14px",fontSize:16,fontFamily:"monospace",outline:"none"}}/><Btn onClick={checkAns}>Check</Btn></div>)}
+          {stage<3&&checked&&wasCorrect&&(<div style={{background:C.greenL,borderRadius:8,padding:16,textAlign:"center",marginTop:8}}><div style={{fontSize:36}}>🎉</div><div style={{fontWeight:800,color:C.green,fontSize:18,marginBottom:10}}>Correct!</div><Btn onClick={nextQ} color={C.green}>{idx<total-1?"Next Mistake":"Finish Review"}</Btn></div>)}
+          {stage<3&&checked&&!wasCorrect&&(<div style={{background:C.redL,borderRadius:8,padding:14,textAlign:"center",marginTop:8}}><div style={{fontSize:28}}>❌</div><div style={{fontWeight:700,color:C.red,marginBottom:10}}>{stage===1?"Not quite — here is more help!":"Still not quite — let's see the solution"}</div><Btn onClick={tryAgain} color={stage===1?C.yellow:C.primary}>{stage===1?"More help":"Show answer"}</Btn></div>)}
+          {stage<3&&videos.length>0&&<div style={{marginTop:14}}>{videos.map(function(v,i){return <a key={i} href={v.url} target="_blank" rel="noreferrer" style={{display:"block",background:"#ef4444",color:"#fff",borderRadius:8,padding:"8px 14px",textDecoration:"none",fontWeight:700,fontSize:13,marginBottom:6}}>▶ Watch: {v.label}</a>;})}</div>}
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+// ── Question list / results ───────────────────────────────────────────────────
+function QuestionList({results,onReviewAll,onReviewOne,onBack,score,maxMarks,date}){
+  const mistakes=results.filter(function(r){return !r.correct;});
+  const pct=Math.round((score/maxMarks)*100);
+  return(
+    <div style={{minHeight:"100vh",background:C.grayL,fontFamily:"system-ui",padding:20}}>
+      <div style={{maxWidth:640,margin:"0 auto"}}>
+        <Card style={{textAlign:"center",marginBottom:16}}>
+          <div style={{fontSize:48,marginBottom:4}}>{pct>=80?"🏆":pct>=60?"⭐":"💪"}</div>
+          <div style={{fontSize:32,fontWeight:900,color:C.primary}}>{score} / {maxMarks}</div>
+          <div style={{fontSize:20,color:pctColor(pct),fontWeight:800}}>{pct}%</div>
+          {date&&<div style={{fontSize:13,color:C.textL,marginTop:4}}>{date}</div>}
+          {mistakes.length>0&&<Btn onClick={onReviewAll} style={{marginTop:12,width:"100%",padding:14,fontSize:15}}>Review all {mistakes.length} mistake{mistakes.length!==1?"s":""} in order</Btn>}
+          {mistakes.length===0&&<div style={{background:C.greenL,borderRadius:8,padding:12,marginTop:12,fontSize:15,color:C.green,fontWeight:700}}>Perfect — no mistakes!</div>}
+        </Card>
+        <Card style={{marginBottom:16}}>
+          <h3 style={{margin:"0 0 12px",fontSize:16}}>All Questions — click any ❌ to review it</h3>
+          <div style={{maxHeight:480,overflowY:"auto"}}>
+            {results.map(function(r,i){return(<div key={i} onClick={function(){if(!r.correct)onReviewOne(r);}} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 10px",borderRadius:8,marginBottom:4,background:r.correct?"#f9fafb":"#fff",border:"1px solid "+(r.correct?"#e5e7eb":"#fca5a5"),cursor:r.correct?"default":"pointer"}}><span style={{fontSize:18,width:24,flexShrink:0}}>{r.correct?"✅":"❌"}</span><span style={{fontSize:12,color:C.textL,width:24,flexShrink:0,fontWeight:700}}>Q{i+1}</span><div style={{flex:1,minWidth:0}}><div style={{fontFamily:"monospace",fontSize:13,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.question}</div><div style={{fontSize:11,color:C.textL}}>{TOPIC_NAMES[r.topic]||r.topic}</div>{!r.correct&&<div style={{fontSize:11,color:C.red}}>Your answer: {r.userAnswer||"(blank)"} — Correct: {String(r.answer)}</div>}</div>{!r.correct&&<span style={{fontSize:12,color:C.primary,fontWeight:700,flexShrink:0}}>Review →</span>}</div>);})}
+          </div>
+        </Card>
+        <Btn onClick={onBack} color={C.grayL} textColor={C.text} style={{width:"100%",padding:14,fontSize:15}}>Back to Dashboard</Btn>
+      </div>
+    </div>
+  );
+}
+function PastPaperSummary({paper,onBack}){
+  const[view,setView]=useState("list");const[reviewMistakes,setReviewMistakes]=useState([]);
+  if(!paper.results||!paper.results.length){return(<div style={{minHeight:"100vh",background:C.grayL,display:"flex",alignItems:"center",justifyContent:"center",padding:20,fontFamily:"system-ui"}}><Card style={{maxWidth:400,textAlign:"center",padding:32}}><div style={{fontSize:48}}>📄</div><h2>Paper — {paper.date}</h2><div style={{fontSize:28,fontWeight:900,color:C.primary,marginBottom:12}}>{paper.score} / 40</div><div style={{fontSize:14,color:C.textL,marginBottom:16}}>No question-level data for this paper.</div><Btn onClick={onBack} style={{width:"100%"}}>Back to Dashboard</Btn></Card></div>);}
+  if(view==="review")return <ReviewFlow mistakes={reviewMistakes} onDone={function(){setView("list");}}/>;
+  return <QuestionList results={paper.results} score={paper.score} maxMarks={40} date={paper.date}
+    onReviewAll={function(){setReviewMistakes(paper.results.filter(function(r){return !r.correct;}));setView("review");}}
+    onReviewOne={function(r){setReviewMistakes([r]);setView("review");}}
+    onBack={onBack}/>;
+}
+
+// ── Practice session ──────────────────────────────────────────────────────────
+function PracticeSession({mode,questions,onComplete,onExit}){
+  const[qIdx,setQIdx]=useState(0);const[ans,setAns]=useState("");const[submitted,setSubmitted]=useState(false);const[results,setResults]=useState([]);
+  const[timeLeft,setTimeLeft]=useState(mode==="timed"?720:mode==="full-paper"?1800:(mode==="custom-timed"?null:null));
+  const[showSelfAssess,setShowSelfAssess]=useState(false);const[selfAssessData,setSelfAssessData]=useState(null);const[exitConfirm,setExitConfirm]=useState(false);const[done,setDone]=useState(false);const[finalResults,setFinalResults]=useState(null);
+  const inputRef=useRef(null);const q=questions[qIdx];const total=questions.length;
+  const noMidReview=mode==="full-paper"||mode==="timed"||mode==="custom-timed";
+  const startTimeRef=useRef(Date.now());const totalSecsRef=useRef(mode==="timed"?720:mode==="full-paper"?1800:null);
+  useEffect(function(){
+    if(totalSecsRef.current===null)return;
+    startTimeRef.current=Date.now();
+    const t=setInterval(function(){
+      const elapsed=Math.floor((Date.now()-startTimeRef.current)/1000);
+      const rem=totalSecsRef.current-elapsed;
+      if(rem<=0){clearInterval(t);setTimeLeft(0);const all=results.concat(questions.slice(results.length).map(function(qq){return Object.assign({},qq,{userAnswer:"",correct:false,marks:0});}));setFinalResults(all);setDone(true);}
+      else setTimeLeft(rem);
+    },250);
+    return function(){clearInterval(t);};
+  },[]);
+  useEffect(function(){if(!submitted&&!showSelfAssess&&inputRef.current)inputRef.current.focus();},[qIdx,submitted,showSelfAssess]);
+  const fmtTime=function(s){return Math.floor(s/60)+":"+String(s%60).padStart(2,"0");};
+  const completeSession=useCallback(function(res){setFinalResults(res);setDone(true);},[]);
+  const submitAns=function(){
+    if(submitted||showSelfAssess)return;if(ans.trim()==="")return;
+    const ua=ans.trim().replace(/,/g,"");const ok=answersMatch(ua,q.answer,q.isText);
+    const isTM=TWO_MARK.has(q.topic);const marks=ok?(isTM?2:1):0;
+    const rec=Object.assign({},q,{userAnswer:ua,correct:ok,marks:marks});const nr=results.concat([rec]);
+    if(noMidReview&&isTM&&!ok){setResults(nr);setSelfAssessData(rec);setShowSelfAssess(true);}
+    else{setResults(nr);if(!noMidReview)setSubmitted(true);else advanceWith(nr);}
+  };
+  const handleSelfAssess=function(gotMethod){
+    const upd=Object.assign({},selfAssessData,{marks:gotMethod?1:0});
+    const nr=results.map(function(r,i){return i===results.length-1?upd:r;});
+    setResults(nr);setSelfAssessData(null);setShowSelfAssess(false);advanceWith(nr);
+  };
+  const advanceWith=function(cr){if(cr.length>=total)completeSession(cr);else{setQIdx(cr.length);setAns("");setSubmitted(false);}};
+  const advanceAfterFeedback=function(){if(qIdx+1>=total)completeSession(results);else{setQIdx(qIdx+1);setAns("");setSubmitted(false);}};
+  useEffect(function(){if(done&&finalResults)onComplete(finalResults);},[done,finalResults]);
+  if(done)return null;
+  const isCorrect=submitted&&results[results.length-1]&&results[results.length-1].correct;
+  const exp=getExp(q.topic);
+  if(showSelfAssess&&selfAssessData){return(<div style={{minHeight:"100vh",background:C.grayL,display:"flex",alignItems:"center",justifyContent:"center",padding:20,fontFamily:"system-ui"}}><Card style={{maxWidth:560,width:"100%"}}><div style={{background:"#fef3c7",borderRadius:8,padding:10,marginBottom:12,fontWeight:700,color:C.yellow}}>2-Mark Question — Method Check</div><p style={{marginBottom:8}}>Your answer was not correct, but you may earn 1 mark for using the right method.</p>{selfAssessData.colHint?<CombinedHintBox exp={exp} colHint={selfAssessData.colHint} hideAnswer={true}/>:selfAssessData.divHint?<DivisionExplanation dividend={selfAssessData.divHint.dividend} divisor={selfAssessData.divHint.divisor} hideAnswer={true}/>:<div style={{background:C.grayL,borderRadius:8,padding:12,fontFamily:"monospace",fontSize:13,whiteSpace:"pre-wrap",marginBottom:12}}>{selfAssessData.dynamicHint||selfAssessData.working||exp.example}</div>}<p style={{fontWeight:700,marginBottom:12}}>Did you use the correct method with only ONE arithmetic error?</p><div style={{display:"flex",gap:10}}><Btn onClick={function(){handleSelfAssess(true);}} color={C.green} style={{flex:1}}>Yes — 1 mark</Btn><Btn onClick={function(){handleSelfAssess(false);}} color={C.red} style={{flex:1}}>No — 0 marks</Btn></div></Card></div>);}
+  return(
+    <div style={{minHeight:"100vh",background:C.grayL,fontFamily:"system-ui"}}>
+      <div style={{background:"#fff",borderBottom:"1px solid #e5e7eb",padding:"12px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:10}}>
+        <button onClick={function(){setExitConfirm(true);}} style={{background:"none",border:"none",cursor:"pointer",fontSize:22,color:C.textL}}>✕</button>
+        <div style={{flex:1,margin:"0 16px"}}>
+          <div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:C.textL,marginBottom:4}}><span>Q{qIdx+1} of {total}</span>{timeLeft!==null&&<span style={{fontWeight:700,color:timeLeft<60?C.red:C.text}}>{fmtTime(timeLeft)}</span>}</div>
+          <PBar pct={(qIdx/total)*100} color={C.primary}/>
+        </div>
+        <div style={{fontSize:12,fontWeight:700,color:C.primary,background:C.primaryL,padding:"4px 10px",borderRadius:99}}>{mode==="full-paper"?"Full Paper":mode==="timed"?"Timed":"Practice"}</div>
+      </div>
+      {exitConfirm&&(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:100,display:"flex",alignItems:"center",justifyContent:"center"}}><Card style={{maxWidth:340,width:"90%",textAlign:"center"}}><h3 style={{marginBottom:8}}>Exit Practice?</h3><p style={{color:C.textL,fontSize:14,marginBottom:16}}>Your progress won't be saved.</p><div style={{display:"flex",gap:10}}><Btn onClick={onExit} color={C.red} style={{flex:1}}>Exit</Btn><Btn onClick={function(){setExitConfirm(false);}} color={C.grayL} textColor={C.text} style={{flex:1}}>Continue</Btn></div></Card></div>)}
+      <div style={{maxWidth:640,margin:"0 auto",padding:20}}>
+        <div style={{fontSize:13,color:C.primary,fontWeight:700,marginBottom:8}}>{TOPIC_NAMES[q.topic]||q.topic}</div>
+        <QuestionCard q={q} qNum={qIdx+1} inputRef={inputRef} ansValue={ans} onAnsChange={function(e){setAns(e.target.value);}} onSubmit={submitAns} submitted={submitted} isCorrect={isCorrect}>
+          {submitted&&!noMidReview&&(<div style={{padding:16,borderTop:"1px solid #e5e7eb"}}><div style={{background:isCorrect?C.greenL:C.redL,borderRadius:10,padding:14,textAlign:"center",marginBottom:isCorrect?0:12}}><div style={{fontSize:30}}>{isCorrect?"✅":"❌"}</div><div style={{fontWeight:800,color:isCorrect?C.green:C.red,fontSize:20}}>{isCorrect?"Correct! Well done!":"Not quite"}</div>{!isCorrect&&<div style={{fontSize:14,marginTop:4}}>The answer was <strong>{renderMath(String(q.answer))}</strong></div>}</div>{!isCorrect&&(<div style={{marginTop:12}}>{q.colHint?<CombinedHintBox exp={exp} colHint={q.colHint}/>:q.pvHint?<ColHintPlaceValue {...q.pvHint}/>:q.decHint?<ColHintDecSub {...q.decHint}/>:q.pvGridHint?<PlaceValueGrid {...q.pvGridHint} showArrows={true}/>:q.sdHint?<ColHintShortDiv {...q.sdHint} hideAnswer={false}/>:q.fracAddHint?<FracAddVisual {...q.fracAddHint}/>:q.fracMixedHint?<FracMixedVisual {...q.fracMixedHint}/>:q.fracSubHint?<FracSubVisual {...q.fracSubHint}/>:q.fracSubMixedHint?<FracSubMixedVisual {...q.fracSubMixedHint}/>:q.fracDivHint?<FracDivVisual {...q.fracDivHint}/>:q.decColHint?<DecimalColVisual {...q.decColHint}/>:q.divHint?null:<NoteBox exp={exp} showExample={true} dynamicHint={q.dynamicHint}/>}{q.divHint&&<DivisionExplanation dividend={q.divHint.dividend} divisor={q.divHint.divisor}/>}{(YT[q.topic]||[]).map(function(v,i){return <a key={i} href={v.url} target="_blank" rel="noreferrer" style={{display:"block",background:"#ef4444",color:"#fff",borderRadius:8,padding:"8px 14px",textDecoration:"none",fontWeight:700,fontSize:13,marginBottom:6}}>▶ Watch: {v.label}</a>;})}</div>)}<Btn onClick={advanceAfterFeedback} style={{width:"100%",marginTop:12,padding:14,fontSize:16}}>{qIdx+1<total?"Next Question":"See Results"}</Btn></div>)}
+        </QuestionCard>
+        {!submitted&&<Btn onClick={submitAns} style={{width:"100%",marginTop:12,padding:14,fontSize:16}}>Submit Answer</Btn>}
+      </div>
+    </div>
+  );
+}
+function ResultsScreen({results,mode,onBack,onReviewAll,onReviewOne}){
+  const totalMarks=results.reduce(function(s,r){return s+(r.marks||0);},0);
+  const correctCount=results.filter(function(r){return r.correct;}).length;
+  const score=mode==="full-paper"?totalMarks:correctCount;
+  const maxMarks=mode==="full-paper"?40:results.length;
+  return <QuestionList results={results} score={score} maxMarks={maxMarks} onReviewAll={onReviewAll} onReviewOne={onReviewOne} onBack={onBack}/>;
+}
+
+// ── Pupil Dashboard ───────────────────────────────────────────────────────────
+function PupilDashboard({user,onUpdate,onLogout,assignments,streakSettings}){
+  const[view,setView]=useState("dashboard");const[mode,setMode]=useState(null);const[questions,setQuestions]=useState([]);const[results,setResults]=useState([]);const[reviewMistakes,setReviewMistakes]=useState([]);const[pastPaperIdx,setPastPaperIdx]=useState(null);const[activeAssignment,setActiveAssignment]=useState(null);
+
+  // My assignments (those targeting this pupil)
+  const myAssignments=(assignments||[]).filter(function(a){
+    const relevant=a.targetPupils==="all"||(Array.isArray(a.targetPupils)&&a.targetPupils.includes(user.name));
+    const done=a.completedBy&&a.completedBy[user.name];
+    return relevant&&!done;
+  }).sort(function(a,b){return new Date(a.dueDate)-new Date(b.dueDate);});
+
+  const startAssignment=function(asgn){
+    setActiveAssignment(asgn);
+    let qs;
+    if(asgn.mode==="full-paper"){qs=generateFullPaper();}
+    else if(asgn.mode==="topic"&&asgn.topic){const usedA=new Set();qs=Array.from({length:10},function(){return genQ(asgn.topic,usedA);});}
+    else{qs=Object.keys(TOPIC_NAMES).sort(function(){return Math.random()-0.5;}).slice(0,10).map(function(t){return genQ(t,new Set());});}
+    setQuestions(qs);setMode(asgn.mode==="timed-session"?"custom-timed":asgn.mode);setView("practice");
+  };
+
+  const startPractice=function(m,topicOverride){
+    setActiveAssignment(null);
+    let qs;
+    if(m==="full-paper")qs=generateFullPaper();
+    else if(m==="topic"&&topicOverride){const usedP=new Set();qs=Array.from({length:10},function(){return genQ(topicOverride,usedP);});}
+    else qs=Object.keys(TOPIC_NAMES).sort(function(){return Math.random()-0.5;}).slice(0,10).map(function(t){return genQ(t,new Set());});
+    setQuestions(qs);setMode(m);setView("practice");
+  };
+
+  const handleComplete=function(res){
+    setResults(res);
+    const today=isoToday();
+    const updated=Object.assign({},user,{
+      topicProgress:Object.assign({},user.topicProgress),
+      fullPapers:(user.fullPapers||[]).slice(),
+      sessions:(user.sessions||0)+1,
+      practiseDates:Array.from(new Set((user.practiseDates||[]).concat([today])))
+    });
+    res.forEach(function(r){
+      if(!updated.topicProgress[r.topic])updated.topicProgress[r.topic]={attempts:[]};
+      updated.topicProgress[r.topic]=Object.assign({},updated.topicProgress[r.topic],{attempts:updated.topicProgress[r.topic].attempts.concat([r.correct?1:0])});
+    });
+    if(mode==="full-paper"||activeAssignment?.mode==="full-paper"){
+      const tm=res.reduce(function(s,r){return s+(r.marks||0);},0);
+      updated.fullPapers=updated.fullPapers.concat([{score:tm,marks:40,date:todayStr(),results:res}]);
+    }
+    onUpdate(updated,activeAssignment);
+    setView("results");
+  };
+
+  if(view==="practice")return <PracticeSession mode={mode} questions={questions} onComplete={handleComplete} onExit={function(){setView("dashboard");}}/>;
+  if(view==="results")return <ResultsScreen results={results} mode={mode} onBack={function(){setView("dashboard");}} onReviewAll={function(){setReviewMistakes(results.filter(function(r){return !r.correct;}));setView("review");}} onReviewOne={function(r){setReviewMistakes([r]);setView("review");}}/>;
+  if(view==="review")return <ReviewFlow mistakes={reviewMistakes} onDone={function(){setView("results");}}/>;
+  if(view==="past-paper-summary"){const p=(user.fullPapers||[])[pastPaperIdx];return <PastPaperSummary paper={p} onBack={function(){setView("dashboard");}}/>;}
+
+  const topicProg=user.topicProgress||{};const fullPapers=user.fullPapers||[];
+  const weakTopics=Object.entries(topicProg).map(function(e){return{t:e[0],pct:getTopicPct(e[1].attempts),n:e[1].attempts.length};}).filter(function(x){return x.n>=3&&x.pct!==null&&x.pct<70;}).sort(function(a,b){return a.pct-b.pct;}).slice(0,4);
+  const streakCount=getStreakCount(user.practiseDates,streakSettings);
+  const dueToday=myAssignments.filter(function(a){return a.dueDate===isoToday();});
+
+  return(
+    <div style={{minHeight:"100vh",background:C.grayL,fontFamily:"system-ui"}}>
+      <div style={{background:C.primary,color:"#fff",padding:"16px 20px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <div><div style={{fontWeight:900,fontSize:20}}>KS2 SATs Arithmetic</div><div style={{fontSize:13,opacity:0.85}}>Welcome back, {user.name}!</div></div>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          {streakCount!==null&&<div style={{background:"rgba(255,255,255,0.2)",borderRadius:10,padding:"6px 12px",textAlign:"center"}}><div style={{fontSize:18}}>🔥</div><div style={{fontSize:12,fontWeight:800}}>{streakCount} day{streakCount!==1?"s":""}</div></div>}
+          <Btn onClick={onLogout} color="rgba(255,255,255,0.2)" textColor="#fff" style={{fontSize:13,padding:"6px 14px"}}>Log out</Btn>
+        </div>
+      </div>
+      <div style={{maxWidth:760,margin:"0 auto",padding:20}}>
+        {myAssignments.length>0&&(
+          <Card style={{marginBottom:16,border:"2px solid "+C.primary}}>
+            <h3 style={{margin:"0 0 12px",color:C.primary,fontSize:16}}>📋 Your Assignments</h3>
+            {myAssignments.map(function(a){
+              const overdue=a.dueDate<isoToday();
+              return(
+                <div key={a.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 14px",background:overdue?C.redL:C.primaryL,borderRadius:10,marginBottom:8,gap:12,flexWrap:"wrap"}}>
+                  <div><div style={{fontWeight:700,fontSize:15}}>{a.title}</div><div style={{fontSize:12,color:overdue?C.red:C.textL}}>Due: {a.dueDate} {overdue?"⚠️ Overdue":""}</div></div>
+                  <Btn onClick={function(){startAssignment(a);}} style={{padding:"8px 18px",fontSize:14}}>Start Now</Btn>
+                </div>
+              );
+            })}
+          </Card>
+        )}
+        <Card style={{marginBottom:16}}>
+          <h3 style={{margin:"0 0 14px",fontSize:17}}>Start Practising</h3>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(190px,1fr))",gap:12}}>
+            {[{m:"quick",icon:"⚡",label:"Quick Practice",sub:"10 questions, no timer",color:C.primaryL,tc:C.primary},{m:"timed",icon:"⏱",label:"Timed Practice",sub:"10 questions, 12 mins",color:C.primaryL,tc:C.primary},{m:"full-paper",icon:"📄",label:"Full Paper",sub:"36 questions, 30 mins",color:C.primary,tc:"#fff"}].map(function(item){return(<button key={item.m} onClick={function(){startPractice(item.m);}} style={{background:item.color,color:item.tc,border:"none",borderRadius:12,padding:16,textAlign:"left",cursor:"pointer",fontFamily:"system-ui"}}><div style={{fontSize:30,marginBottom:4}}>{item.icon}</div><div style={{fontWeight:800,fontSize:15}}>{item.label}</div><div style={{fontSize:12,opacity:0.8,marginTop:2}}>{item.sub}</div></button>);})  }
+          </div>
+        </Card>
+        <Card style={{marginBottom:16}}>
+          <h3 style={{margin:"0 0 4px",fontSize:17}}>Full Paper Progress</h3>
+          <p style={{fontSize:13,color:C.textL,marginBottom:12}}>Click a dot to review that paper.</p>
+          <LineGraph papers={fullPapers} onClickPaper={fullPapers.length>0?function(i){setPastPaperIdx(i);setView("past-paper-summary");}:null}/>
+          {fullPapers.length>0&&<div style={{display:"flex",flexWrap:"wrap",gap:8,marginTop:12}}>{fullPapers.slice(-5).map(function(p,i){return(<button key={i} onClick={function(){setPastPaperIdx(i);setView("past-paper-summary");}} style={{background:C.primaryL,borderRadius:8,padding:"5px 12px",fontSize:13,border:"2px solid "+C.primary,cursor:"pointer",fontFamily:"system-ui"}}><strong>{p.score}/40</strong> <span style={{color:C.textL,fontSize:11}}>({p.date})</span></button>);})}</div>}
+        </Card>
+        {weakTopics.length>0&&(<Card style={{marginBottom:16}}><h3 style={{margin:"0 0 6px",fontSize:17}}>Suggested Areas to Improve</h3><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(175px,1fr))",gap:10}}>{weakTopics.map(function(item){return(<button key={item.t} onClick={function(){startPractice("topic",item.t);}} style={{background:"#fff",border:"2px solid "+pctColor(item.pct),borderRadius:10,padding:12,textAlign:"left",cursor:"pointer",fontFamily:"system-ui"}}><div style={{fontWeight:700,fontSize:13,marginBottom:6}}>{TOPIC_EMOJI[item.t]||"📝"} {TOPIC_NAMES[item.t]}</div><PBar pct={item.pct} color={pctColor(item.pct)}/><div style={{fontSize:12,color:pctColor(item.pct),marginTop:4,fontWeight:700}}>{item.pct}%</div></button>);})}</div></Card>)}
+        <Card>
+          <h3 style={{margin:"0 0 4px",fontSize:17}}>Practice by Topic</h3>
+          <p style={{color:C.textL,fontSize:13,marginBottom:18}}>Click any tile for 10 focused questions.</p>
+          {TOPIC_CATEGORIES.map(function(cat,ci){const cc=CAT_COLOURS[ci];return(<div key={cat.label} style={{marginBottom:24}}><div style={{fontWeight:800,fontSize:14,color:cc.heading,marginBottom:10,display:"flex",alignItems:"center",gap:8}}><div style={{flex:1,height:3,background:cc.border,borderRadius:99}}/><span style={{background:cc.bg,border:"2px solid "+cc.border,borderRadius:20,padding:"3px 14px"}}>{cat.label}</span><div style={{flex:1,height:3,background:cc.border,borderRadius:99}}/></div><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(148px,1fr))",gap:8}}>{cat.topics.map(function(t){const d=topicProg[t];const pct=d?getTopicPct(d.attempts):null;const hasVideo=(YT[t]||[]).length>0;return(<button key={t} onClick={function(){startPractice("topic",t);}} style={{background:cc.bg,border:"2px solid "+(pct!==null?pctColor(pct):cc.border),borderRadius:12,padding:"10px 12px",textAlign:"left",cursor:"pointer",fontFamily:"system-ui"}}><div style={{fontSize:22,marginBottom:4}}>{TOPIC_EMOJI[t]||"📝"}</div><div style={{fontWeight:700,fontSize:12,lineHeight:1.3,color:cc.text,marginBottom:4}}>{TOPIC_NAMES[t]}</div>{pct!==null&&<React.Fragment><PBar pct={pct} color={pctColor(pct)}/><div style={{fontSize:11,color:pctColor(pct),marginTop:3,fontWeight:700}}>{pct}%</div></React.Fragment>}{pct===null&&<div style={{fontSize:11,color:cc.text,opacity:0.6}}>Not tried yet</div>}{hasVideo&&<div style={{fontSize:10,color:"#ef4444",marginTop:3}}>Video available</div>}</button>);})}</div></div>);})}
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+// ── Print pupil report ────────────────────────────────────────────────────────
+function printPupilReport(p,notes){
+  const tp=p.topicProgress||{};
+  const papers=p.fullPapers||[];
+  const allA=Object.values(tp).flatMap(function(d){return d.attempts||[];});
+  const overall=allA.length?Math.round(allA.reduce(function(s,v){return s+v;},0)/allA.length*100):null;
+  const topicRows=Object.entries(tp).map(function(e){const pct=getTopicPct(e[1].attempts);const m=masteryLabel(pct);return{topic:e[0],pct,m};}).filter(function(x){return x.pct!==null;}).sort(function(a,b){return a.pct-b.pct;});
+  const paperRows=papers.slice(-5).map(function(fp){return "<tr><td>"+fp.date+"</td><td>"+fp.score+"/40</td><td>"+Math.round(fp.score/40*100)+"%</td></tr>";}).join("");
+  const topicRowsHtml=topicRows.map(function(x){const name=TOPIC_NAMES[x.topic]||x.topic;const bar='<div style="background:#e5e7eb;border-radius:4px;height:10px;width:100%;"><div style="width:'+x.pct+'%;background:'+(x.pct>=70?"#16a34a":x.pct>=50?"#d97706":"#dc2626")+';height:100%;border-radius:4px;"></div></div>';return "<tr><td>"+name+"</td><td>"+bar+"</td><td>"+x.pct+"%</td><td>"+(x.m?x.m.label:"—")+"</td></tr>";}).join("");
+  const teacherNote=(notes&&notes[p.name])?notes[p.name]:"";
+  const w=window.open("","_blank","width=800,height=900");
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Report - ${p.name}</title><style>
+    body{font-family:Arial,sans-serif;max-width:700px;margin:40px auto;color:#111;}
+    h1{color:#4f46e5;font-size:22px;border-bottom:3px solid #4f46e5;padding-bottom:8px;}
+    h2{font-size:16px;color:#374151;margin-top:24px;}
+    table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px;}
+    th{background:#e0e7ff;padding:8px;text-align:left;font-size:12px;}
+    td{padding:7px 8px;border-bottom:1px solid #f3f4f6;}
+    .badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;}
+    .overall{font-size:28px;font-weight:900;color:#4f46e5;}
+    @media print{button{display:none;}}
+  </style></head><body>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+      <div><h1>KS2 SATs Arithmetic — Pupil Report</h1><h2 style="margin-top:0;font-size:20px;">${p.name}</h2></div>
+      <div style="text-align:right;"><div style="font-size:11px;color:#6b7280;">Printed: ${new Date().toLocaleDateString('en-GB')}</div><button onclick="window.print()" style="margin-top:8px;background:#4f46e5;color:#fff;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-size:13px;">🖨 Print / Save PDF</button></div>
+    </div>
+    <div style="display:flex;gap:20px;margin:16px 0;flex-wrap:wrap;">
+      <div style="background:#e0e7ff;border-radius:12px;padding:16px 24px;text-align:center;"><div class="overall">${overall!==null?overall+"%" :"—"}</div><div style="font-size:12px;color:#374151;font-weight:700;">Overall Score</div></div>
+      <div style="background:#f3f4f6;border-radius:12px;padding:16px 24px;text-align:center;"><div style="font-size:28px;font-weight:900;">${p.sessions||0}</div><div style="font-size:12px;color:#374151;font-weight:700;">Sessions</div></div>
+      <div style="background:#f3f4f6;border-radius:12px;padding:16px 24px;text-align:center;"><div style="font-size:28px;font-weight:900;">${papers.length}</div><div style="font-size:12px;color:#374151;font-weight:700;">Full Papers</div></div>
+    </div>
+    <h2>Full Paper Results (last 5)</h2>
+    ${papers.length?`<table><tr><th>Date</th><th>Score</th><th>%</th></tr>${paperRows}</table>`:"<p>No full papers completed yet.</p>"}
+    <h2>Topic Progress</h2>
+    ${topicRows.length?`<table><tr><th>Topic</th><th>Progress</th><th>Score</th><th>Mastery</th></tr>${topicRowsHtml}</table>`:"<p>No topic data yet.</p>"}
+    ${teacherNote?`<h2>Teacher Note</h2><div style="background:#fffef5;border:1px solid #d1a054;border-radius:6px;padding:12px;font-size:13px;">${teacherNote.replace(/</g,"&lt;").replace(/>/g,"&gt;")}</div>`:""}
+    <div style="margin-top:32px;font-size:11px;color:#9ca3af;border-top:1px solid #e5e7eb;padding-top:12px;">KS2 SATs Arithmetic Tracker — generated ${new Date().toLocaleDateString('en-GB')}</div>
+  </body></html>`);
+  w.document.close();
+}
+
+function printClassInsights(weakAreas,heatmapData){
+  const win=window.open("","_blank","width=800,height=900");
+  const weakRows=weakAreas.map(function(item){return "<tr><td>"+(TOPIC_NAMES[item.topic]||item.topic)+"</td><td>"+item.avg+"%</td><td>"+item.pupils+" pupil"+(item.pupils!==1?"s":"")+"</td></tr>";}).join("");
+  const heatRows=heatmapData.map(function(item){return "<tr><td>"+(TOPIC_NAMES[item.topic]||item.topic)+"</td><td>"+item.pct+"%</td><td>"+item.total+" q</td></tr>";}).join("");
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Class Insights</title><style>body{font-family:Arial,sans-serif;max-width:700px;margin:40px auto;color:#111;}h1{color:#4f46e5;border-bottom:3px solid #4f46e5;padding-bottom:8px;}h2{font-size:16px;color:#374151;margin-top:24px;}table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px;}th{background:#e0e7ff;padding:8px;text-align:left;}td{padding:7px 8px;border-bottom:1px solid #f3f4f6;}@media print{button{display:none;}}</style></head><body><div style="display:flex;justify-content:space-between;align-items:flex-start;"><h1>Class Insights</h1><div><div style="font-size:11px;color:#6b7280;">Printed: ${new Date().toLocaleDateString('en-GB')}</div><button onclick="window.print()" style="margin-top:8px;background:#4f46e5;color:#fff;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-size:13px;">🖨 Print / Save PDF</button></div></div><h2>Class Weak Areas</h2>${weakRows?`<table><tr><th>Topic</th><th>Avg %</th><th>Pupils</th></tr>${weakRows}</table>`:"<p>No data yet.</p>"}${heatRows?`<h2>Paper Heatmap</h2><table><tr><th>Topic</th><th>Accuracy</th><th>Questions</th></tr>${heatRows}</table>`:""}</body></html>`);
+  win.document.close();
+}
+
+// Fix #7: sort by surname
+function bySurname(name){const p=(name||"").trim().split(" ");if(p.length<2)return name.toLowerCase();return(p[p.length-1]+" "+p.slice(0,-1).join(" ")).toLowerCase();}
+
+// ── Teacher Dashboard ─────────────────────────────────────────────────────────
+function TeacherDashboard({teacher,pupils,onUpdatePupils,onLogout,assignments,onSaveAssignments,streakSettings,onSaveStreakSettings,notes,onSaveNotes}){
+  const[tab,setTab]=useState("overview");const[viewPupil,setViewPupil]=useState(null);const[resetTarget,setResetTarget]=useState(null);const[newPw,setNewPw]=useState("");const[sortCol,setSortCol]=useState(null);const[sortDir,setSortDir]=useState("asc");const[weakSort,setWeakSort]=useState(null);
+
+  // Assignment form state
+  const[showNewAssignment,setShowNewAssignment]=useState(false);
+  const[asgnTitle,setAsgnTitle]=useState("");const[asgnMode,setAsgnMode]=useState("full-paper");const[asgnTopic,setAsgnTopic]=useState("");const[asgnDue,setAsgnDue]=useState(isoToday());const[asgnTarget,setAsgnTarget]=useState("all");const[asgnDuration,setAsgnDuration]=useState(30);const[asgnPupils,setAsgnPupils]=useState([]);
+
+  // Insights state
+  const[heatmapFrom,setHeatmapFrom]=useState("");const[heatmapTo,setHeatmapTo]=useState("");
+
+  // Alert threshold
+  const[alertDays,setAlertDays]=useState(5);
+
+  const getPupilStats=function(p){
+    const allA=Object.values(p.topicProgress||{}).flatMap(function(d){return d.attempts||[];});
+    const overall=allA.length?Math.round(allA.reduce(function(s,v){return s+v;},0)/allA.length*100):null;
+    const last3=(p.fullPapers||[]).slice(-3);
+    const weak=Object.entries(p.topicProgress||{}).map(function(e){return{t:e[0],pct:getTopicPct(e[1].attempts)};}).filter(function(x){return x.pct!==null&&x.pct<70;}).sort(function(a,b){return a.pct-b.pct;});
+    return{allA,overall,last3,weak};
+  };
+
+  const handleColSort=function(col){
+    if(sortCol===col){setSortDir(function(d){return d==="asc"?"desc":"asc";});}else{setSortCol(col);setSortDir("asc");}
+    setWeakSort(null);
+  };
+
+  const sortedPupils=pupils.slice().sort(function(a,b){
+    if(weakSort){const wa=getPupilStats(a).weak,wb=getPupilStats(b).weak;if(weakSort==="pct"){return(wa.length?wa[0].pct:101)-(wb.length?wb[0].pct:101);}else{return(wa.length?TOPIC_NAMES[wa[0].t]||wa[0].t:"ZZZ").localeCompare(wb.length?TOPIC_NAMES[wb[0].t]||wb[0].t:"ZZZ");}}
+    if(!sortCol)return bySurname(a.name)<bySurname(b.name)?-1:bySurname(a.name)>bySurname(b.name)?1:0;
+    const sa=getPupilStats(a),sb=getPupilStats(b);
+    if(sortCol==="name"){return sortDir==="asc"?bySurname(a.name).localeCompare(bySurname(b.name)):bySurname(b.name).localeCompare(bySurname(a.name));}
+    let va,vb;
+    if(sortCol==="sessions"){va=a.sessions||0;vb=b.sessions||0;}
+    else if(sortCol==="overall"){va=sa.overall!==null?sa.overall:-1;vb=sb.overall!==null?sb.overall:-1;}
+    else if(sortCol==="login"){va=a.lastLogin||"0000";vb=b.lastLogin||"0000";}
+    else return 0;
+    return sortDir==="asc"?va<vb?-1:va>vb?1:0:vb<va?-1:vb>va?1:0;
+  });
+
+  const SortBtn=function(props){const active=sortCol===props.col&&!weakSort;return(<th onClick={function(){handleColSort(props.col);}} style={{padding:"10px 12px",textAlign:"left",fontWeight:800,color:active?C.primaryD:C.primary,whiteSpace:"nowrap",cursor:"pointer",userSelect:"none",background:active?C.primaryL:"transparent"}}>{props.label} {active?(sortDir==="asc"?"▲":"▼"):"⇅"}</th>);};
+
+  const doReset=function(){onUpdatePupils(pupils.map(function(p){return p.name===resetTarget?Object.assign({},p,{password:newPw}):p;}));setResetTarget(null);setNewPw("");};
+  const clearProgress=function(name){if(!window.confirm("Clear all progress for "+name+"?"))return;onUpdatePupils(pupils.map(function(p){return p.name===name?Object.assign({},p,{topicProgress:{},fullPapers:[],sessions:0,practiseDates:[]}):p;}));};
+
+  const exportCSV=function(){
+    const rows=[["Name","Sessions","Last Login","Overall %","Last 3 Papers","Weak Areas","Streak Days"]];
+    sortedPupils.forEach(function(p){
+      const st=getPupilStats(p);const last3str=st.last3.map(function(fp){return fp.score+"/40 ("+fp.date+")";}).join(" | ");
+      const weakStr=st.weak.slice(0,3).map(function(x){return(TOPIC_NAMES[x.t]||x.t)+" ("+x.pct+"%)";}).join("; ");
+      const streak=getStreakCount(p.practiseDates,streakSettings);
+      rows.push([p.name,p.sessions||0,lastLoginLabel(p.lastLogin),(st.overall!==null?st.overall:0)+"%",last3str,weakStr,streak!==null?streak:"N/A"]);
+    });
+    const csv=rows.map(function(r){return r.map(function(c){return'"'+String(c).replace(/"/g,'""')+'"';}).join(",");}).join("\n");
+    const a=document.createElement("a");a.href="data:text/csv;charset=utf-8,"+encodeURIComponent(csv);a.download="sats-class.csv";a.click();
+  };
+
+  const saveAssignment=function(){
+    if(!asgnTitle||!asgnDue)return;
+    const newA={id:String(Date.now()),title:asgnTitle,mode:asgnMode,topic:asgnTopic||null,dueDate:asgnDue,duration:asgnDuration,targetPupils:asgnTarget==="all"?"all":asgnPupils,completedBy:{}};
+    onSaveAssignments((assignments||[]).concat([newA]));
+    setShowNewAssignment(false);setAsgnTitle("");setAsgnMode("full-paper");setAsgnTopic("");setAsgnDue(isoToday());setAsgnTarget("all");setAsgnPupils([]);
+  };
+
+  const deleteAssignment=function(id){onSaveAssignments((assignments||[]).filter(function(a){return a.id!==id;}));};
+
+  // Class heatmap: topic accuracy for papers completed in date range
+  const computeHeatmap=function(){
+    if(!heatmapFrom||!heatmapTo)return[];
+    const topicTotals={},topicCorrect={};
+    pupils.forEach(function(p){
+      (p.fullPapers||[]).forEach(function(fp){
+        // convert dd/mm/yy to ISO for comparison
+        if(!fp.date||!fp.results||!fp.results.length)return;
+        const parts=fp.date.split("/");if(parts.length!==3)return;
+        const iso="20"+parts[2]+"-"+parts[1]+"-"+parts[0];
+        if(iso<heatmapFrom||iso>heatmapTo)return;
+        fp.results.forEach(function(r){
+          if(!topicTotals[r.topic])topicTotals[r.topic]=0;
+          if(!topicCorrect[r.topic])topicCorrect[r.topic]=0;
+          topicTotals[r.topic]++;if(r.correct)topicCorrect[r.topic]++;
+        });
+      });
+    });
+    return Object.entries(topicTotals).map(function(e){const t=e[0],tot=e[1];const pct=Math.round((topicCorrect[t]||0)/tot*100);return{topic:t,pct,total:tot};}).sort(function(a,b){return a.pct-b.pct;});
+  };
+
+  // Class weak areas (all pupils combined)
+  const classWeakAreas=function(){
+    const topicPcts={};
+    pupils.forEach(function(p){
+      Object.entries(p.topicProgress||{}).forEach(function(e){
+        const pct=getTopicPct(e[1].attempts);if(pct===null)return;
+        if(!topicPcts[e[0]])topicPcts[e[0]]=[];
+        topicPcts[e[0]].push(pct);
+      });
+    });
+    return Object.entries(topicPcts).filter(function(e){return e[1].length>=2;}).map(function(e){const avg=Math.round(e[1].reduce(function(s,v){return s+v;},0)/e[1].length);return{topic:e[0],avg,pupils:e[1].length};}).sort(function(a,b){return a.avg-b.avg;});
+  };
+
+  // Inactive pupils
+  const inactivePupils=pupils.filter(function(p){const d=daysSince(p.lastLogin);return d===null||d>=alertDays;});
+
+  // Single pupil view
+  if(viewPupil){
+    const p=pupils.find(function(x){return x.name===viewPupil;});
+    if(!p){setViewPupil(null);return null;}
+    const tp=p.topicProgress||{};
+    const pupilNote=notes?notes[p.name]||"":"";
+    const weak=Object.entries(tp).map(function(e){return{t:e[0],pct:getTopicPct(e[1].attempts)};}).filter(function(x){return x.pct!==null&&x.pct<76;}).sort(function(a,b){return a.pct-b.pct;}).slice(0,5);
+    return(
+      <div style={{minHeight:"100vh",background:C.grayL,fontFamily:"system-ui",padding:20}}>
+        <div style={{maxWidth:700,margin:"0 auto"}}>
+          <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16,flexWrap:"wrap"}}>
+            <Btn onClick={function(){setViewPupil(null);}} color={C.grayL} textColor={C.text} style={{padding:"8px 14px",fontSize:14}}>← Back</Btn>
+            <h2 style={{margin:0,flex:1}}>{p.name}</h2>
+            <Btn onClick={function(){printPupilReport(p,notes);}} color={C.green} style={{padding:"8px 14px",fontSize:14}}>🖨 Print Report</Btn>
+          </div>
+          <div style={{display:"flex",gap:12,marginBottom:16,flexWrap:"wrap"}}>
+            {[{label:"Sessions",val:p.sessions||0},{label:"Last Login",val:lastLoginLabel(p.lastLogin)},{label:"Overall %",val:(getPupilStats(p).overall!==null?getPupilStats(p).overall+"%":"—")},{label:"Papers",val:(p.fullPapers||[]).length}].map(function(stat){return(<div key={stat.label} style={{background:"#fff",borderRadius:10,padding:"12px 18px",boxShadow:"0 1px 6px rgba(0,0,0,0.06)",minWidth:100,textAlign:"center"}}><div style={{fontSize:22,fontWeight:900,color:C.primary}}>{stat.val}</div><div style={{fontSize:11,color:C.textL,fontWeight:700}}>{stat.label}</div></div>);})}
+          </div>
+          <Card style={{marginBottom:16}}><h3 style={{margin:"0 0 12px"}}>Full Paper Progress</h3><LineGraph papers={p.fullPapers||[]}/></Card>
+          {weak.length>0&&(<Card style={{marginBottom:16}}><h3 style={{margin:"0 0 12px"}}>Areas to Improve</h3>{weak.map(function(item){const m=masteryLabel(item.pct);return(<div key={item.t} style={{display:"flex",alignItems:"center",gap:12,marginBottom:10}}><div style={{minWidth:180,fontSize:13,fontWeight:700}}>{TOPIC_NAMES[item.t]||item.t}</div><div style={{flex:1}}><PBar pct={item.pct} color={pctColor(item.pct)}/></div><div style={{width:44,fontSize:13,fontWeight:700,color:pctColor(item.pct),textAlign:"right"}}>{item.pct}%</div><MasteryBadge pct={item.pct}/></div>);})}</Card>)}
+          <Card style={{marginBottom:16}}>
+            <h3 style={{margin:"0 0 12px"}}>All Topic Progress</h3>
+            {Object.keys(tp).length===0?<p style={{color:C.textL}}>No data yet.</p>:(
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:8}}>
+                {Object.entries(tp).map(function(e){const t=e[0],d=e[1];const pct=getTopicPct(d.attempts);if(pct===null)return null;return(<div key={t} style={{background:C.grayL,borderRadius:8,padding:"8px 10px"}}><div style={{fontSize:12,fontWeight:700,marginBottom:4}}>{TOPIC_NAMES[t]||t}</div><PBar pct={pct} color={pctColor(pct)}/><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:4}}><div style={{fontSize:11,color:pctColor(pct),fontWeight:700}}>{pct}%</div><MasteryBadge pct={pct}/></div></div>);}).filter(Boolean)}
+              </div>
+            )}
+          </Card>
+          <Card>
+            <h3 style={{margin:"0 0 10px"}}>Teacher Notes</h3>
+            <textarea value={pupilNote} onChange={function(e){const n=Object.assign({},notes||{});n[p.name]=e.target.value;onSaveNotes(n);}} placeholder="Private notes about this pupil (not visible to the pupil)..." style={{width:"100%",border:"2px solid #d1d5db",borderRadius:8,padding:10,fontSize:14,fontFamily:"system-ui",minHeight:80,resize:"vertical",outline:"none",boxSizing:"border-box"}}/>
+            <div style={{fontSize:11,color:C.textL,marginTop:4}}>Notes are private and auto-saved as you type.</div>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  const heatmapData=computeHeatmap();
+  const weakAreas=classWeakAreas();
+  const streak=streakSettings||{active:false,startDate:"",endDate:""};
+
+  return(
+    <div style={{minHeight:"100vh",background:C.grayL,fontFamily:"system-ui"}}>
+      <div style={{background:C.primary,color:"#fff",padding:"16px 20px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <div><div style={{fontWeight:900,fontSize:20}}>Teacher Dashboard</div><div style={{fontSize:13,opacity:0.85}}>{teacher.name} — {pupils.length} pupil{pupils.length!==1?"s":""}</div></div>
+        <div style={{display:"flex",gap:8}}>
+          <Btn onClick={exportCSV} color="rgba(255,255,255,0.2)" textColor="#fff" style={{fontSize:13,padding:"6px 14px"}} disabled={pupils.length===0}>Export CSV</Btn>
+          <Btn onClick={onLogout} color="rgba(255,255,255,0.15)" textColor="#fff" style={{fontSize:13,padding:"6px 14px"}}>Log out</Btn>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div style={{background:"#fff",borderBottom:"1px solid #e5e7eb",overflowX:"auto",display:"flex",paddingLeft:16}}>
+        {[{id:"overview",label:"📊 Overview"},{id:"assignments",label:"📋 Assignments"},{id:"insights",label:"🔍 Class Insights"},{id:"settings",label:"⚙️ Settings"}].map(function(t){return <Tab key={t.id} label={t.label} active={tab===t.id} onClick={function(){setTab(t.id);}}/>;}) }
+      </div>
+
+      <div style={{maxWidth:1100,margin:"0 auto",padding:20}}>
+
+        {/* ── Overview tab ── */}
+        {tab==="overview"&&(
+          pupils.length===0?(
+            <Card style={{textAlign:"center",padding:40}}><div style={{fontSize:48}}>👥</div><h3>No pupils yet</h3><p style={{color:C.textL}}>Pupils will appear here once they log in.</p></Card>
+          ):(
+            <React.Fragment>
+              {inactivePupils.length>0&&(
+                <Card style={{marginBottom:16,background:"#fff7ed",border:"2px solid #f97316"}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
+                    <div style={{fontWeight:700,color:"#c2410c",fontSize:15}}>⚠️ {inactivePupils.length} pupil{inactivePupils.length!==1?"s":""} haven't logged in for {alertDays}+ days</div>
+                    <div style={{display:"flex",alignItems:"center",gap:8,fontSize:13}}>
+                      <span style={{color:C.textL}}>Alert threshold:</span>
+                      <input type="number" value={alertDays} min={1} max={30} onChange={function(e){setAlertDays(Number(e.target.value));}} style={{width:50,border:"1px solid #d1d5db",borderRadius:6,padding:"3px 6px",fontSize:13,textAlign:"center"}}/>
+                      <span style={{color:C.textL}}>days</span>
+                    </div>
+                  </div>
+                  <div style={{display:"flex",flexWrap:"wrap",gap:8,marginTop:10}}>{inactivePupils.map(function(p){return <span key={p.name} style={{background:"#fed7aa",borderRadius:8,padding:"3px 10px",fontSize:13,fontWeight:600}}>{p.name} ({lastLoginLabel(p.lastLogin)})</span>;})}</div>
+                </Card>
+              )}
+              <Card style={{overflowX:"auto"}}>
+                <h3 style={{margin:"0 0 14px"}}>Class Overview</h3>
+                <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
+                  <thead>
+                    <tr style={{background:C.primaryL}}>
+                      <SortBtn col="name" label="Pupil"/>
+                      <SortBtn col="sessions" label="Sessions"/>
+                      <SortBtn col="login" label="Last Login"/>
+                      <SortBtn col="overall" label="Overall %"/>
+                      <th style={{padding:"10px 12px",fontWeight:800,color:C.primary}}>Mastery</th>
+                      <th style={{padding:"10px 12px",textAlign:"left",fontWeight:800,color:C.primary}}>Last 3 Papers</th>
+                      <th style={{padding:"10px 12px",textAlign:"left",fontWeight:800,color:C.primary}}>
+                        <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+                          <span>Weak Areas</span>
+                          <button onClick={function(){setWeakSort("pct");setSortCol(null);}} style={{fontSize:10,padding:"2px 7px",borderRadius:6,border:"1px solid "+(weakSort==="pct"?C.primaryD:C.primary),background:weakSort==="pct"?C.primary:"#fff",color:weakSort==="pct"?"#fff":C.primary,cursor:"pointer",fontFamily:"system-ui",fontWeight:700}}>%</button>
+                          <button onClick={function(){setWeakSort("topic");setSortCol(null);}} style={{fontSize:10,padding:"2px 7px",borderRadius:6,border:"1px solid "+(weakSort==="topic"?C.primaryD:C.primary),background:weakSort==="topic"?C.primary:"#fff",color:weakSort==="topic"?"#fff":C.primary,cursor:"pointer",fontFamily:"system-ui",fontWeight:700}}>Topic</button>
+                          {weakSort&&<button onClick={function(){setWeakSort(null);}} style={{fontSize:10,padding:"2px 7px",borderRadius:6,border:"1px solid #ccc",background:"#fff",color:C.textL,cursor:"pointer",fontFamily:"system-ui"}}>✕</button>}
+                        </div>
+                      </th>
+                      {streakSettings&&streakSettings.active&&<th style={{padding:"10px 12px",fontWeight:800,color:C.primary}}>🔥 Streak</th>}
+                      <th style={{padding:"10px 12px",textAlign:"left",fontWeight:800,color:C.primary}}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sortedPupils.map(function(p,i){
+                      const st=getPupilStats(p);const inactive=daysSince(p.lastLogin)>=alertDays;
+                      const streakCount=streakSettings&&streakSettings.active?getStreakCount(p.practiseDates,streakSettings):null;
+                      return(
+                        <tr key={p.name} style={{borderBottom:"1px solid #f3f4f6",background:i%2===0?"#fafafa":"#fff"}}>
+                          <td style={{padding:"10px 12px",fontWeight:700}}>{p.name}{notes&&notes[p.name]&&<span title={notes[p.name]} style={{marginLeft:6,cursor:"help",fontSize:12}}>📝</span>}</td>
+                          <td style={{padding:"10px 12px"}}>{p.sessions||0}</td>
+                          <td style={{padding:"10px 12px"}}><span style={{color:inactive?C.red:C.text,fontWeight:inactive?700:400}}>{lastLoginLabel(p.lastLogin)}</span></td>
+                          <td style={{padding:"10px 12px"}}>{st.overall!==null?<span style={{fontWeight:700,color:pctColor(st.overall)}}>{st.overall}%</span>:<span style={{color:C.textL}}>—</span>}</td>
+                          <td style={{padding:"10px 12px"}}><MasteryBadge pct={st.overall}/></td>
+                          <td style={{padding:"10px 12px"}}>{st.last3.length===0?<span style={{color:C.textL,fontSize:12}}>None yet</span>:<div style={{display:"flex",gap:4,flexWrap:"wrap"}}>{st.last3.map(function(fp,j){return <span key={j} style={{background:C.primaryL,borderRadius:6,padding:"2px 8px",fontWeight:700,fontSize:12}}>{fp.score}/40</span>;})}</div>}</td>
+                          <td style={{padding:"10px 12px"}}>{st.weak.length===0?<span style={{color:C.green,fontSize:12}}>On track ✓</span>:st.weak.slice(0,2).map(function(item){return <div key={item.t} style={{fontSize:11,color:pctColor(item.pct)}}>{TOPIC_NAMES[item.t]||item.t} ({item.pct}%)</div>;})}</td>
+                          {streakSettings&&streakSettings.active&&<td style={{padding:"10px 12px",textAlign:"center"}}><span style={{fontWeight:700,fontSize:14}}>{streakCount!==null?streakCount+"🔥":"—"}</span></td>}
+                          <td style={{padding:"10px 12px"}}><div style={{display:"flex",gap:6,flexWrap:"wrap"}}><Btn onClick={function(){setViewPupil(p.name);}} style={{padding:"4px 10px",fontSize:12}}>View</Btn><Btn onClick={function(){setResetTarget(p.name);setNewPw("");}} color="#fef3c7" textColor={C.yellow} style={{padding:"4px 10px",fontSize:12}}>Reset PW</Btn><Btn onClick={function(){clearProgress(p.name);}} color="#fee2e2" textColor={C.red} style={{padding:"4px 10px",fontSize:12}}>Clear</Btn></div></td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </Card>
+            </React.Fragment>
+          )
+        )}
+
+        {/* ── Assignments tab ── */}
+        {tab==="assignments"&&(
+          <React.Fragment>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+              <h2 style={{margin:0}}>Assignments</h2>
+              <Btn onClick={function(){setShowNewAssignment(true);}}>+ New Assignment</Btn>
+            </div>
+            {showNewAssignment&&(
+              <Card style={{marginBottom:20,border:"2px solid "+C.primary}}>
+                <h3 style={{margin:"0 0 14px",color:C.primary}}>Create Assignment</h3>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
+                  <div>
+                    <label style={{fontSize:12,fontWeight:700,display:"block",marginBottom:4}}>Title</label>
+                    <input value={asgnTitle} onChange={function(e){setAsgnTitle(e.target.value);}} placeholder="e.g. Week 5 Full Paper" style={{width:"100%",border:"2px solid #d1d5db",borderRadius:8,padding:"8px 12px",fontSize:14,boxSizing:"border-box",outline:"none"}}/>
+                  </div>
+                  <div>
+                    <label style={{fontSize:12,fontWeight:700,display:"block",marginBottom:4}}>Due Date</label>
+                    <input type="date" value={asgnDue} onChange={function(e){setAsgnDue(e.target.value);}} style={{width:"100%",border:"2px solid #d1d5db",borderRadius:8,padding:"8px 12px",fontSize:14,boxSizing:"border-box",outline:"none"}}/>
+                  </div>
+                  <div>
+                    <label style={{fontSize:12,fontWeight:700,display:"block",marginBottom:4}}>Type</label>
+                    <select value={asgnMode} onChange={function(e){setAsgnMode(e.target.value);}} style={{width:"100%",border:"2px solid #d1d5db",borderRadius:8,padding:"8px 12px",fontSize:14,outline:"none"}}>
+                      <option value="full-paper">Full Arithmetic Paper (36 questions)</option>
+                      <option value="quick">Quick Practice (10 questions)</option>
+                      <option value="timed">Timed Practice (10 questions, 12 mins)</option>
+                      <option value="timed-session">Timed Session (open practice with timer)</option>
+                      <option value="topic">Specific Topic (10 questions)</option>
+                    </select>
+                  </div>
+                  {asgnMode==="topic"&&(
+                    <div>
+                      <label style={{fontSize:12,fontWeight:700,display:"block",marginBottom:4}}>Topic</label>
+                      <select value={asgnTopic} onChange={function(e){setAsgnTopic(e.target.value);}} style={{width:"100%",border:"2px solid #d1d5db",borderRadius:8,padding:"8px 12px",fontSize:14,outline:"none"}}>
+                        <option value="">Select topic...</option>
+                        {Object.entries(TOPIC_NAMES).map(function(e){return <option key={e[0]} value={e[0]}>{e[1]}</option>;})}
+                      </select>
+                    </div>
+                  )}
+                  {asgnMode==="timed-session"&&(
+                    <div>
+                      <label style={{fontSize:12,fontWeight:700,display:"block",marginBottom:4}}>Duration (minutes)</label>
+                      <input type="number" value={asgnDuration} min={5} max={120} onChange={function(e){setAsgnDuration(Number(e.target.value));}} style={{width:"100%",border:"2px solid #d1d5db",borderRadius:8,padding:"8px 12px",fontSize:14,boxSizing:"border-box",outline:"none"}}/>
+                    </div>
+                  )}
+                  <div>
+                    <label style={{fontSize:12,fontWeight:700,display:"block",marginBottom:4}}>Set for</label>
+                    <select value={asgnTarget} onChange={function(e){setAsgnTarget(e.target.value);}} style={{width:"100%",border:"2px solid #d1d5db",borderRadius:8,padding:"8px 12px",fontSize:14,outline:"none"}}>
+                      <option value="all">Whole Class</option>
+                      <option value="individual">Individual Pupils</option>
+                    </select>
+                  </div>
+                </div>
+                {asgnTarget==="individual"&&(
+                  <div style={{marginBottom:12}}>
+                    <label style={{fontSize:12,fontWeight:700,display:"block",marginBottom:8}}>Select Pupils</label>
+                    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:6}}>
+                      {pupils.map(function(p){const checked=asgnPupils.includes(p.name);return(<label key={p.name} style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",background:checked?C.primaryL:"#f9fafb",border:"2px solid "+(checked?C.primary:"#e5e7eb"),borderRadius:8,padding:"6px 10px",fontSize:13,fontWeight:checked?700:400}}><input type="checkbox" checked={checked} onChange={function(){setAsgnPupils(function(prev){return checked?prev.filter(function(n){return n!==p.name;}):prev.concat([p.name]);});}} style={{accentColor:C.primary}}/>{p.name}</label>);}) }
+                    </div>
+                  </div>
+                )}
+                <div style={{display:"flex",gap:10}}>
+                  <Btn onClick={saveAssignment} disabled={!asgnTitle||!asgnDue||(asgnMode==="topic"&&!asgnTopic)||(asgnTarget==="individual"&&asgnPupils.length===0)}>Save Assignment</Btn>
+                  <Btn onClick={function(){setShowNewAssignment(false);}} color={C.grayL} textColor={C.text}>Cancel</Btn>
+                </div>
+              </Card>
+            )}
+            {(assignments||[]).length===0?<Card style={{textAlign:"center",padding:32,color:C.textL}}>No assignments yet. Click "+ New Assignment" to create one.</Card>:(
+              (assignments||[]).slice().reverse().map(function(a){
+                const targetLabel=a.targetPupils==="all"?"Whole class":(Array.isArray(a.targetPupils)?a.targetPupils.join(", "):"");
+                const completedCount=Object.keys(a.completedBy||{}).length;
+                const total=a.targetPupils==="all"?pupils.length:(Array.isArray(a.targetPupils)?a.targetPupils.length:0);
+                const overdue=a.dueDate<isoToday();
+                return(
+                  <Card key={a.id} style={{marginBottom:12,border:"1px solid "+(overdue?"#fca5a5":"#e5e7eb")}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:8}}>
+                      <div>
+                        <div style={{fontWeight:800,fontSize:16}}>{a.title}</div>
+                        <div style={{fontSize:13,color:C.textL,marginTop:2}}>
+                          {a.mode==="full-paper"?"Full Paper":a.mode==="quick"?"Quick Practice":a.mode==="timed"?"Timed Practice":a.mode==="timed-session"?"Timed Session ("+a.duration+"min)":a.topic?(TOPIC_NAMES[a.topic]||a.topic):"Practice"}
+                          {" · "}{targetLabel}{" · Due: "}{a.dueDate}
+                          {overdue&&<span style={{color:C.red,fontWeight:700}}> ⚠️ Overdue</span>}
+                        </div>
+                        <div style={{marginTop:6}}>
+                          <div style={{fontSize:12,color:C.textL,marginBottom:3}}>Completed: {completedCount} / {total}</div>
+                          <div style={{width:200,height:6,background:"#e5e7eb",borderRadius:99}}><div style={{width:(total?completedCount/total*100:0)+"%",background:C.green,height:"100%",borderRadius:99}}/></div>
+                        </div>
+                        {completedCount>0&&<div style={{fontSize:11,color:C.textL,marginTop:4}}>✅ {Object.keys(a.completedBy||{}).join(", ")}</div>}
+                      </div>
+                      <Btn onClick={function(){deleteAssignment(a.id);}} color="#fee2e2" textColor={C.red} style={{padding:"4px 10px",fontSize:12}}>Delete</Btn>
+                    </div>
+                  </Card>
+                );
+              })
+            )}
+          </React.Fragment>
+        )}
+
+        {/* ── Insights tab ── */}
+        {tab==="insights"&&(
+          <React.Fragment>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:20}}>
+              <Card>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+                  <h3 style={{margin:0,fontSize:16}}>Class Weak Areas</h3>
+                  <Btn onClick={function(){printClassInsights(weakAreas,heatmapData);}} color={C.grayL} textColor={C.text} style={{fontSize:12,padding:"4px 10px"}}>🖨 Print Insights</Btn>
+                </div>
+                <p style={{fontSize:13,color:C.textL,marginBottom:12}}>Averaged across all pupils with 2+ attempts.</p>
+                {weakAreas.length===0?<p style={{color:C.textL,fontSize:13}}>Not enough data yet.</p>:weakAreas.slice(0,10).map(function(item){return(
+                  <div key={item.topic} style={{marginBottom:10}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:3}}>
+                      <span style={{fontSize:13,fontWeight:700}}>{TOPIC_NAMES[item.topic]||item.topic}</span>
+                      <div style={{display:"flex",alignItems:"center",gap:6}}><span style={{fontSize:12,color:pctColor(item.avg),fontWeight:700}}>{item.avg}%</span><MasteryBadge pct={item.avg}/></div>
+                    </div>
+                    <PBar pct={item.avg} color={pctColor(item.avg)}/>
+                    <div style={{fontSize:10,color:C.textL,marginTop:2}}>{item.pupils} pupil{item.pupils!==1?"s":""} have data</div>
+                  </div>
+                );})}
+              </Card>
+              <Card>
+                <h3 style={{margin:"0 0 14px",fontSize:16}}>Class Paper Heatmap</h3>
+                <p style={{fontSize:13,color:C.textL,marginBottom:8}}>Topic accuracy for papers completed in a date range.</p>
+                <div style={{display:"flex",gap:8,marginBottom:12,alignItems:"center",flexWrap:"wrap"}}>
+                  <input type="date" value={heatmapFrom} onChange={function(e){setHeatmapFrom(e.target.value);}} style={{border:"2px solid #d1d5db",borderRadius:8,padding:"6px 10px",fontSize:13,outline:"none"}}/>
+                  <span style={{color:C.textL}}>to</span>
+                  <input type="date" value={heatmapTo} onChange={function(e){setHeatmapTo(e.target.value);}} style={{border:"2px solid #d1d5db",borderRadius:8,padding:"6px 10px",fontSize:13,outline:"none"}}/>
+                </div>
+                {heatmapData.length===0?<p style={{color:C.textL,fontSize:13}}>{heatmapFrom&&heatmapTo?"No papers found in that range.":"Select a date range to see results."}</p>:heatmapData.map(function(item){
+                  const heat=item.pct>=80?"#dcfce7":item.pct>=60?"#fef3c7":item.pct>=40?"#fed7aa":"#fee2e2";
+                  return(
+                    <div key={item.topic} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6,padding:"5px 8px",background:heat,borderRadius:6}}>
+                      <div style={{width:40,height:16,background:item.pct>=80?"#16a34a":item.pct>=60?"#d97706":item.pct>=40?"#ea580c":"#dc2626",borderRadius:3,opacity:0.85}}/>
+                      <span style={{fontSize:13,fontWeight:700,flex:1}}>{TOPIC_NAMES[item.topic]||item.topic}</span>
+                      <span style={{fontSize:13,fontWeight:700}}>{item.pct}%</span>
+                      <span style={{fontSize:11,color:C.textL}}>({item.total})</span>
+                    </div>
+                  );
+                })}
+              </Card>
+            </div>
+          </React.Fragment>
+        )}
+
+        {/* ── Settings tab ── */}
+        {tab==="settings"&&(
+          <React.Fragment>
+            <Card style={{maxWidth:520,marginBottom:20}}>
+              <h3 style={{margin:"0 0 8px",fontSize:16}}>🔥 Streak Challenge</h3>
+              <p style={{fontSize:13,color:C.textL,marginBottom:16}}>Set a date range to activate a streak challenge. Pupils will see a flame counter showing how many days they've practised within the window. Deactivate it after the challenge ends.</p>
+              <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:14}}>
+                <span style={{fontSize:14,fontWeight:700}}>Active</span>
+                <button onClick={function(){onSaveStreakSettings(Object.assign({},streak,{active:!streak.active}));}} style={{width:48,height:26,background:streak.active?C.green:"#d1d5db",borderRadius:99,border:"none",cursor:"pointer",position:"relative",transition:"background 0.2s"}}>
+                  <div style={{width:20,height:20,background:"#fff",borderRadius:"50%",position:"absolute",top:3,left:streak.active?24:4,transition:"left 0.2s"}}/>
+                </button>
+                <span style={{fontSize:13,color:C.textL}}>{streak.active?"On":"Off"}</span>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:14}}>
+                <div>
+                  <label style={{fontSize:12,fontWeight:700,display:"block",marginBottom:4}}>Start Date</label>
+                  <input type="date" value={streak.startDate} onChange={function(e){onSaveStreakSettings(Object.assign({},streak,{startDate:e.target.value}));}} style={{width:"100%",border:"2px solid #d1d5db",borderRadius:8,padding:"8px 12px",fontSize:14,boxSizing:"border-box",outline:"none"}}/>
+                </div>
+                <div>
+                  <label style={{fontSize:12,fontWeight:700,display:"block",marginBottom:4}}>End Date</label>
+                  <input type="date" value={streak.endDate} onChange={function(e){onSaveStreakSettings(Object.assign({},streak,{endDate:e.target.value}));}} style={{width:"100%",border:"2px solid #d1d5db",borderRadius:8,padding:"8px 12px",fontSize:14,boxSizing:"border-box",outline:"none"}}/>
+                </div>
+              </div>
+              {streak.active&&streak.startDate&&streak.endDate&&<div style={{background:C.greenL,borderRadius:8,padding:10,fontSize:13,color:C.green,fontWeight:600}}>✅ Streak challenge active: {streak.startDate} → {streak.endDate}</div>}
+            </Card>
+          </React.Fragment>
+        )}
+      </div>
+
+      {/* Reset password modal */}
+      {resetTarget&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:100}}>
+          <Card style={{maxWidth:360,width:"90%"}}>
+            <h3 style={{marginBottom:12}}>Reset Password — {resetTarget}</h3>
+            <input value={newPw} onChange={function(e){setNewPw(e.target.value);}} onKeyDown={function(e){if(e.key==="Enter"&&newPw)doReset();}} placeholder="New password" style={{width:"100%",border:"2px solid #d1d5db",borderRadius:8,padding:"10px 14px",fontSize:15,boxSizing:"border-box",marginBottom:12,fontFamily:"inherit",outline:"none"}}/>
+            <div style={{display:"flex",gap:10}}>
+              <Btn onClick={doReset} disabled={!newPw} style={{flex:1}}>Reset</Btn>
+              <Btn onClick={function(){setResetTarget(null);}} color={C.grayL} textColor={C.text} style={{flex:1}}>Cancel</Btn>
+            </div>
+          </Card>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Login ─────────────────────────────────────────────────────────────────────
+function LoginScreen({onLogin}){
+  const[role,setRole]=useState(null);const[name,setName]=useState("");const[pw,setPw]=useState("");const[error,setError]=useState("");const[loading,setLoading]=useState(false);
+  const handleLogin=async function(){
+    if(!name.trim()||!pw)return;setLoading(true);setError("");
+    const key=role==="teacher"?"sats-teachers":"sats-pupils";
+    const users=await load(key,[]);
+    const existing=users.find(function(u){return u.name.toLowerCase()===name.trim().toLowerCase();});
+    const today=isoToday();
+    if(existing){
+      if(existing.password!==pw){setError("Incorrect password — try again.");setLoading(false);return;}
+      const updated=Object.assign({},existing,{lastLogin:today});
+      const nu=users.map(function(u){return u.name===updated.name?updated:u;});
+      await save(key,nu);
+      onLogin(role,updated,nu,key);
+    }else{
+      const nu=role==="teacher"?{name:name.trim(),password:pw,role:"teacher",lastLogin:today}:{name:name.trim(),password:pw,role:"pupil",sessions:0,topicProgress:{},fullPapers:[],lastLogin:today,practiseDates:[]};
+      const upd=users.concat([nu]);await save(key,upd);onLogin(role,nu,upd,key);
+    }
+    setLoading(false);
+  };
+  const loadDemo=async function(){
+    await save("sats-pupils",DEMO_PUPILS);
+    onLogin("teacher",{name:"Demo Teacher",password:"demo",role:"teacher",lastLogin:isoToday()},DEMO_PUPILS,"sats-pupils");
+  };
+  return(
+    <div style={{minHeight:"100vh",background:"linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%)",display:"flex",alignItems:"center",justifyContent:"center",padding:20,fontFamily:"system-ui"}}>
+      <div style={{width:"100%",maxWidth:420}}>
+        <div style={{textAlign:"center",marginBottom:28}}>
+          <div style={{fontSize:56}}>📐</div>
+          <h1 style={{color:"#fff",margin:0,fontSize:28,fontWeight:900}}>KS2 SATs Arithmetic</h1>
+          <p style={{color:"rgba(255,255,255,0.8)",margin:"6px 0 0",fontSize:15}}>Powered by real past papers</p>
+        </div>
+        <Card>
+          {!role&&(<div><h2 style={{textAlign:"center",marginBottom:20,fontSize:18}}>I am a...</h2><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>{[{r:"pupil",icon:"🎒",label:"Pupil",bg:C.primaryL,tc:C.primary,border:"2px solid "+C.primary},{r:"teacher",icon:"👩‍🏫",label:"Teacher",bg:"#f0fdf4",tc:C.green,border:"2px solid #16a34a"}].map(function(item){return(<button key={item.r} onClick={function(){setRole(item.r);}} style={{background:item.bg,border:item.border,borderRadius:12,padding:24,cursor:"pointer",fontFamily:"inherit"}}><div style={{fontSize:36}}>{item.icon}</div><div style={{fontWeight:800,fontSize:16,color:item.tc}}>{item.label}</div></button>);})}</div><div style={{marginTop:20,textAlign:"center"}}><button onClick={loadDemo} style={{background:"none",border:"none",color:C.primary,textDecoration:"underline",cursor:"pointer",fontSize:13,fontFamily:"inherit"}}>View demo with 10 sample pupils</button></div></div>)}
+          {role&&(<div><button onClick={function(){setRole(null);setError("");setName("");setPw("");}} style={{background:"none",border:"none",color:C.textL,cursor:"pointer",fontSize:20,padding:0,marginBottom:12}}>←</button><h2 style={{margin:"0 0 18px",fontSize:18}}>{role==="pupil"?"Pupil":"Teacher"} Login</h2><div style={{marginBottom:12}}><label style={{fontSize:13,fontWeight:700,display:"block",marginBottom:4}}>Your name</label><input value={name} onChange={function(e){setName(e.target.value);}} placeholder="e.g. Amelia Clarke" style={{width:"100%",border:"2px solid #d1d5db",borderRadius:8,padding:"10px 14px",fontSize:15,boxSizing:"border-box",fontFamily:"inherit",outline:"none"}}/></div><div style={{marginBottom:14}}><label style={{fontSize:13,fontWeight:700,display:"block",marginBottom:4}}>Password</label><input type="password" value={pw} onChange={function(e){setPw(e.target.value);}} onKeyDown={function(e){if(e.key==="Enter")handleLogin();}} placeholder="Choose or enter your password" style={{width:"100%",border:"2px solid #d1d5db",borderRadius:8,padding:"10px 14px",fontSize:15,boxSizing:"border-box",fontFamily:"inherit",outline:"none"}}/></div>{error&&<div style={{background:C.redL,color:C.red,borderRadius:8,padding:"8px 12px",fontSize:13,marginBottom:12}}>{error}</div>}<Btn onClick={handleLogin} style={{width:"100%",padding:14,fontSize:16}} disabled={!name.trim()||!pw||loading}>{loading?"Loading...":role==="pupil"?"Start Practising":"View Dashboard"}</Btn><p style={{fontSize:12,color:C.textL,textAlign:"center",marginTop:10,marginBottom:0}}>New? Just enter your name and choose a password!</p></div>)}
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+// ── App root ──────────────────────────────────────────────────────────────────
+function App(){
+  const[session,setSession]=useState(null);
+  const[assignments,setAssignments]=useState([]);
+  const[streakSettings,setStreakSettings]=useState({active:false,startDate:"",endDate:""});
+  const[notes,setNotes]=useState({});
+
+  useEffect(function(){
+    load("sats-assignments",[]).then(setAssignments);
+    load("sats-streak-settings",{active:false,startDate:"",endDate:""}).then(setStreakSettings);
+    load("sats-notes",{}).then(setNotes);
+  },[]);
+
+  const handleLogin=function(role,user,users,key){setSession({role,user,users,key});};
+  const handleLogout=function(){setSession(null);};
+
+  const updateUser=async function(updated,completedAssignment){
+    const nu=session.users.map(function(u){return u.name===updated.name?updated:u;});
+    await save(session.key,nu);
+    let newAssignments=assignments;
+    if(completedAssignment){
+      newAssignments=assignments.map(function(a){
+        if(a.id!==completedAssignment.id)return a;
+        const cb=Object.assign({},a.completedBy||{});cb[updated.name]=isoToday();
+        return Object.assign({},a,{completedBy:cb});
+      });
+      setAssignments(newAssignments);await save("sats-assignments",newAssignments);
+    }
+    setSession(function(s){return Object.assign({},s,{user:updated,users:nu});});
+  };
+
+  const updatePupils=async function(np){
+    await save(session.key,np);
+    setSession(function(s){return Object.assign({},s,{users:np});});
+  };
+
+  const saveAssignments=async function(a){setAssignments(a);await save("sats-assignments",a);};
+  const saveStreakSettings=async function(s){setStreakSettings(s);await save("sats-streak-settings",s);};
+  const saveNotes=async function(n){setNotes(n);await save("sats-notes",n);};
+
+  if(!session)return <LoginScreen onLogin={handleLogin}/>;
+  if(session.role==="pupil")return <PupilDashboard user={session.user} onUpdate={updateUser} onLogout={handleLogout} assignments={assignments} streakSettings={streakSettings}/>;
+  if(session.role==="teacher")return <TeacherDashboard teacher={session.user} pupils={session.users.filter(function(u){return u.role!=="teacher";})} onUpdatePupils={updatePupils} onLogout={handleLogout} assignments={assignments} onSaveAssignments={saveAssignments} streakSettings={streakSettings} onSaveStreakSettings={saveStreakSettings} notes={notes} onSaveNotes={saveNotes}/>;
+  return null;
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App, null));
+</script>
+</body>
+</html>
