@@ -7,6 +7,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:system-ui,sans-serif;}</style>
 </head>
 <body>
@@ -22,8 +23,24 @@ const TOPIC_CATEGORIES=[{label:"Addition & Subtraction",topics:["addition","plac
 const TWO_MARK=new Set(["long-multiplication","long-division","long-multiplication-4d","long-division-4d"]);
 const YT={addition:[{label:"Adding large numbers",url:"https://youtu.be/0aypMq0xtJA"}],subtraction:[{label:"Subtracting whole numbers",url:"https://youtu.be/u5TrnXczeag"}],"short-multiplication":[{label:"Short multiplication",url:"https://youtu.be/yEDoC8sUdxk"}],"long-multiplication":[{label:"Long multiplication",url:"https://youtu.be/oyG9EZzHWbg"}],"long-multiplication-4d":[{label:"Long multiplication",url:"https://youtu.be/oyG9EZzHWbg"}],"short-division":[{label:"Short division",url:"https://youtu.be/SLze82Zcc4Y"}],"long-division":[{label:"Long division",url:"https://youtu.be/UNwr1BDeunA"}],"long-division-4d":[{label:"Long division",url:"https://youtu.be/UNwr1BDeunA"}],"multiply-powers":[{label:"Multiplying by 10/100/1000",url:"https://youtu.be/niMiajTassU"}],"divide-powers":[{label:"Dividing by 10/100/1000",url:"https://youtu.be/niMiajTassU"}],"fractions-add":[{label:"Adding fractions",url:"https://youtu.be/pYEI-QUYLYs"}],"fractions-add-mixed":[{label:"Adding mixed numbers",url:"https://youtu.be/NjO0B0AcYS0"}],"fractions-subtract":[{label:"Subtracting fractions",url:"https://youtu.be/Fv88Yx5GyVI"}],"fractions-subtract-mixed":[{label:"Subtracting mixed numbers",url:"https://youtu.be/Fv88Yx5GyVI"}],"fractions-multiply":[{label:"Fractions of amounts",url:"https://youtu.be/QldmM73tLX4"}],"fractions-divide":[{label:"Dividing a fraction",url:"https://youtu.be/H4e3mNkVUQo"}],"decimals-add":[{label:"Adding decimals",url:"https://youtu.be/uikq-0TRK-4"}],"decimals-subtract":[{label:"Subtracting decimals",url:"https://youtu.be/a8tCGNB-vOk"}],"decimals-multiply":[{label:"Multiplying decimals",url:"https://youtu.be/Dm028SSei88"}],percentage:[{label:"Percentages",url:"https://youtu.be/kfBaaZdynBU"}],bidmas:[{label:"BIDMAS",url:"https://youtu.be/VZqnqzfmnwE"}],indices:[{label:"Powers & Indices",url:"https://youtu.be/VZqnqzfmnwE"}],"multiply-three":[{label:"Multiplying 3 numbers",url:"https://youtu.be/niMiajTassU"}],"place-value":[],"missing-add":[],"missing-sub":[],"missing-div":[],"sub-decimal":[{label:"Subtracting decimals from whole numbers",url:"https://youtu.be/t3oPWzssnQ8"}],"division-remainder":[]};
 
+const SUPA_URL="https://ghialldqjnnmalskfvur.supabase.co";
+const SUPA_KEY="sb_publishable_7Q9EJJVvLlanDc6NMkc2Xg_dQtAwpzm";
+const sb=window.supabase.createClient(SUPA_URL,SUPA_KEY);
+
 async function load(key,fallback){try{const v=localStorage.getItem(key);return v?JSON.parse(v):fallback;}catch(e){return fallback;}}
 async function save(key,val){try{localStorage.setItem(key,JSON.stringify(val));}catch(e){}}
+
+async function sbGetAllTeachers(){const{data,error}=await sb.from("users").select("*").eq("role","teacher").order("surname");if(error)throw error;return data||[];}
+async function sbGetPupils(teacherId){const{data,error}=await sb.from("users").select("*").eq("teacher_id",teacherId).eq("role","pupil").order("surname");if(error)throw error;return(data||[]).map(function(u){return{id:u.id,name:u.name+" "+u.surname,firstName:u.name,surname:u.surname,password:u.password,role:"pupil",teacher_id:u.teacher_id,class_name:u.class_name,topicProgress:{},practiseDates:[],sessions:0,lastLogin:null,fullPapers:[]};});}
+async function sbLoginPupil(id,password){const{data,error}=await sb.from("users").select("*").eq("id",id).single();if(error||!data)return null;if(data.password!==password)return null;return data;}
+async function sbLoginTeacher(username,password){const{data,error}=await sb.from("users").select("*").eq("username",username).in("role",["teacher","admin"]).single();if(error||!data)return null;if(data.password!==password)return null;return data;}
+async function sbGetScores(userId){const{data,error}=await sb.from("scores").select("*").eq("user_id",userId);if(error)return{};const p={};(data||[]).forEach(function(r){p[r.topic]={attempts:r.results,lastPractised:r.last_practised};});return p;}
+async function sbSaveScores(userId,topicProgress){const rows=Object.keys(topicProgress).map(function(topic){const t=topicProgress[topic];return{user_id:userId,topic,results:t.attempts||[],last_practised:t.lastPractised||new Date().toISOString(),updated_at:new Date().toISOString()};});if(!rows.length)return;await sb.from("scores").upsert(rows,{onConflict:"user_id,topic"});}
+async function sbSavePupil(teacherId,className,pupil){const parts=(pupil.name||"").trim().split(" ");const surname=parts.length>1?parts.pop():"";const firstName=parts.join(" ")||surname;const rec={name:firstName,surname,role:"pupil",password:pupil.password||"sats2025",teacher_id:teacherId,class_name:className||""};if(pupil.id){await sb.from("users").update(rec).eq("id",pupil.id);}else{await sb.from("users").insert(rec);}}
+async function sbDeletePupil(id){await sb.from("users").delete().eq("id",id);}
+async function sbCreateTeacher(name,surname,username,password,className){await sb.from("users").insert({name,surname,role:"teacher",username,password,class_name:className||""});}
+async function sbUpdatePassword(id,password){await sb.from("users").update({password}).eq("id",id);}
+async function sbGetAllUsers(){const{data}=await sb.from("users").select("*").order("role").order("surname");return data||[];}
 
 const gcd=(a,b)=>b===0?a:gcd(b,a%b);
 const simplify=(n,d)=>{const g=gcd(Math.abs(n),Math.abs(d));return[n/g,d/g];};
@@ -1888,7 +1905,7 @@ function TeacherDashboard({teacher,pupils,onUpdatePupils,onLogout,assignments,on
 
       {/* Tabs */}
       <div style={{background:"#fff",borderBottom:"1px solid #e5e7eb",overflowX:"auto",display:"flex",paddingLeft:16}}>
-        {[{id:"overview",label:"📊 Overview"},{id:"assignments",label:"📋 Assignments"},{id:"insights",label:"🔍 Class Insights"},{id:"settings",label:"⚙️ Settings"}].map(function(t){return <Tab key={t.id} label={t.label} active={tab===t.id} onClick={function(){setTab(t.id);}}/>;}) }
+        {[{id:"overview",label:"📊 Overview"},{id:"pupils",label:"👥 Pupils"},{id:"assignments",label:"📋 Assignments"},{id:"insights",label:"🔍 Class Insights"},{id:"settings",label:"⚙️ Settings"}].map(function(t){return <Tab key={t.id} label={t.label} active={tab===t.id} onClick={function(){setTab(t.id);}}/>;}) }
       </div>
 
       <div style={{maxWidth:1100,margin:"0 auto",padding:20}}>
@@ -2103,6 +2120,16 @@ function TeacherDashboard({teacher,pupils,onUpdatePupils,onLogout,assignments,on
         )}
 
         {/* ── Settings tab ── */}
+        {tab==="pupils"&&(
+          <PupilManagementPanel
+            teacher={teacher}
+            pupils={pupils}
+            onRefresh={async function(){
+              const ps=await sbGetPupils(teacher.id);
+              onUpdatePupils(ps);
+            }}
+          />
+        )}
         {tab==="settings"&&(
           <React.Fragment>
             <Card style={{maxWidth:520,marginBottom:20}}>
@@ -2150,42 +2177,349 @@ function TeacherDashboard({teacher,pupils,onUpdatePupils,onLogout,assignments,on
 
 // ── Login ─────────────────────────────────────────────────────────────────────
 function LoginScreen({onLogin}){
-  const[role,setRole]=useState(null);const[name,setName]=useState("");const[pw,setPw]=useState("");const[error,setError]=useState("");const[loading,setLoading]=useState(false);
-  const handleLogin=async function(){
-    if(!name.trim()||!pw)return;setLoading(true);setError("");
-    const key=role==="teacher"?"sats-teachers":"sats-pupils";
-    const users=await load(key,[]);
-    const existing=users.find(function(u){return u.name.toLowerCase()===name.trim().toLowerCase();});
-    const today=isoToday();
-    if(existing){
-      if(existing.password!==pw){setError("Incorrect password — try again.");setLoading(false);return;}
-      const updated=Object.assign({},existing,{lastLogin:today});
-      const nu=users.map(function(u){return u.name===updated.name?updated:u;});
-      await save(key,nu);
-      onLogin(role,updated,nu,key);
-    }else{
-      const nu=role==="teacher"?{name:name.trim(),password:pw,role:"teacher",lastLogin:today}:{name:name.trim(),password:pw,role:"pupil",sessions:0,topicProgress:{},fullPapers:[],lastLogin:today,practiseDates:[]};
-      const upd=users.concat([nu]);await save(key,upd);onLogin(role,nu,upd,key);
-    }
+  const[tab,setTab]=useState("pupil");
+  const[teachers,setTeachers]=useState([]);
+  const[selectedTeacher,setSelectedTeacher]=useState("");
+  const[pupils,setPupils]=useState([]);
+  const[selectedPupil,setSelectedPupil]=useState("");
+  const[username,setUsername]=useState("");
+  const[pw,setPw]=useState("");
+  const[error,setError]=useState("");
+  const[loading,setLoading]=useState(false);
+  const[loadingPupils,setLoadingPupils]=useState(false);
+  const[loadingTeachers,setLoadingTeachers]=useState(true);
+
+  useEffect(function(){
+    sbGetAllTeachers().then(function(ts){setTeachers(ts);setLoadingTeachers(false);}).catch(function(){setError("Could not connect — check your internet connection.");setLoadingTeachers(false);});
+  },[]);
+
+  useEffect(function(){
+    if(!selectedTeacher){setPupils([]);return;}
+    setLoadingPupils(true);setSelectedPupil("");
+    sbGetPupils(selectedTeacher).then(function(ps){setPupils(ps);setLoadingPupils(false);}).catch(function(){setLoadingPupils(false);});
+  },[selectedTeacher]);
+
+  const handlePupilLogin=async function(){
+    if(!selectedPupil||!pw.trim()){setError("Please select your name and enter your password.");return;}
+    setLoading(true);setError("");
+    try{
+      const pupil=pupils.find(function(p){return p.id===selectedPupil;});
+      if(!pupil){setError("Pupil not found.");setLoading(false);return;}
+      if(pupil.password!==pw){setError("Incorrect password — try again.");setLoading(false);return;}
+      const progress=await sbGetScores(pupil.id);
+      const user=Object.assign({},pupil,{topicProgress:progress,practiseDates:[],sessions:0,lastLogin:isoToday(),fullPapers:[]});
+      onLogin("pupil",user,pupils,"supabase");
+    }catch(e){setError("Login error — please try again.");}
     setLoading(false);
   };
-  const loadDemo=async function(){
-    await save("sats-pupils",DEMO_PUPILS);
-    onLogin("teacher",{name:"Demo Teacher",password:"demo",role:"teacher",lastLogin:isoToday()},DEMO_PUPILS,"sats-pupils");
+
+  const handleStaffLogin=async function(){
+    if(!username.trim()||!pw.trim()){setError("Please enter your username and password.");return;}
+    setLoading(true);setError("");
+    try{
+      const user=await sbLoginTeacher(username.trim(),pw);
+      if(!user){setError("Incorrect username or password.");setLoading(false);return;}
+      if(user.role==="admin"){
+        const all=await sbGetAllUsers();
+        onLogin("admin",user,all,"supabase");
+      } else {
+        const ps=await sbGetPupils(user.id);
+        onLogin("teacher",user,ps,"supabase");
+      }
+    }catch(e){setError("Login error — please try again.");}
+    setLoading(false);
   };
+
+  const inp={width:"100%",padding:"10px 12px",borderRadius:8,border:"1.5px solid #e2e8f0",fontSize:15,fontFamily:"system-ui",outline:"none",background:"#fff"};
+  const btn={width:"100%",padding:"12px 0",background:C.primary,color:"#fff",border:"none",borderRadius:8,fontWeight:700,fontSize:15,cursor:"pointer",marginTop:4};
   return(
-    <div style={{minHeight:"100vh",background:"linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%)",display:"flex",alignItems:"center",justifyContent:"center",padding:20,fontFamily:"system-ui"}}>
-      <div style={{width:"100%",maxWidth:420}}>
-        <div style={{textAlign:"center",marginBottom:28}}>
-          <div style={{fontSize:56}}>📐</div>
-          <h1 style={{color:"#fff",margin:0,fontSize:28,fontWeight:900}}>KS2 SATs Arithmetic</h1>
-          <p style={{color:"rgba(255,255,255,0.8)",margin:"6px 0 0",fontSize:15}}>Powered by real past papers</p>
-        </div>
-        <Card>
-          {!role&&(<div><h2 style={{textAlign:"center",marginBottom:20,fontSize:18}}>I am a...</h2><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>{[{r:"pupil",icon:"🎒",label:"Pupil",bg:C.primaryL,tc:C.primary,border:"2px solid "+C.primary},{r:"teacher",icon:"👩‍🏫",label:"Teacher",bg:"#f0fdf4",tc:C.green,border:"2px solid #16a34a"}].map(function(item){return(<button key={item.r} onClick={function(){setRole(item.r);}} style={{background:item.bg,border:item.border,borderRadius:12,padding:24,cursor:"pointer",fontFamily:"inherit"}}><div style={{fontSize:36}}>{item.icon}</div><div style={{fontWeight:800,fontSize:16,color:item.tc}}>{item.label}</div></button>);})}</div><div style={{marginTop:20,textAlign:"center"}}><button onClick={loadDemo} style={{background:"none",border:"none",color:C.primary,textDecoration:"underline",cursor:"pointer",fontSize:13,fontFamily:"inherit"}}>View demo with 10 sample pupils</button></div></div>)}
-          {role&&(<div><button onClick={function(){setRole(null);setError("");setName("");setPw("");}} style={{background:"none",border:"none",color:C.textL,cursor:"pointer",fontSize:20,padding:0,marginBottom:12}}>←</button><h2 style={{margin:"0 0 18px",fontSize:18}}>{role==="pupil"?"Pupil":"Teacher"} Login</h2><div style={{marginBottom:12}}><label style={{fontSize:13,fontWeight:700,display:"block",marginBottom:4}}>Your name</label><input value={name} onChange={function(e){setName(e.target.value);}} placeholder="e.g. Amelia Clarke" style={{width:"100%",border:"2px solid #d1d5db",borderRadius:8,padding:"10px 14px",fontSize:15,boxSizing:"border-box",fontFamily:"inherit",outline:"none"}}/></div><div style={{marginBottom:14}}><label style={{fontSize:13,fontWeight:700,display:"block",marginBottom:4}}>Password</label><input type="password" value={pw} onChange={function(e){setPw(e.target.value);}} onKeyDown={function(e){if(e.key==="Enter")handleLogin();}} placeholder="Choose or enter your password" style={{width:"100%",border:"2px solid #d1d5db",borderRadius:8,padding:"10px 14px",fontSize:15,boxSizing:"border-box",fontFamily:"inherit",outline:"none"}}/></div>{error&&<div style={{background:C.redL,color:C.red,borderRadius:8,padding:"8px 12px",fontSize:13,marginBottom:12}}>{error}</div>}<Btn onClick={handleLogin} style={{width:"100%",padding:14,fontSize:16}} disabled={!name.trim()||!pw||loading}>{loading?"Loading...":role==="pupil"?"Start Practising":"View Dashboard"}</Btn><p style={{fontSize:12,color:C.textL,textAlign:"center",marginTop:10,marginBottom:0}}>New? Just enter your name and choose a password!</p></div>)}
-        </Card>
+    <div style={{minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"linear-gradient(135deg,#667eea 0%,#764ba2 100%)",padding:16}}>
+      <div style={{marginBottom:24,textAlign:"center"}}>
+        <div style={{fontSize:30,fontWeight:800,color:"#fff",letterSpacing:-0.5}}>SATs Arithmetic Tracker</div>
+        <div style={{fontSize:14,color:"rgba(255,255,255,0.85)",marginTop:4}}>KS2 Arithmetic Practice</div>
       </div>
+      <div style={{background:"#fff",borderRadius:16,padding:"28px 24px",maxWidth:380,width:"100%",boxShadow:"0 8px 32px rgba(0,0,0,0.18)"}}>
+        <div style={{display:"flex",borderBottom:"1.5px solid #f0f0f0",marginBottom:20}}>
+          {[["pupil","Pupil"],["staff","Teacher / Admin"]].map(function(t){return(
+            <button key={t[0]} onClick={function(){setTab(t[0]);setError("");setPw("");}} style={{flex:1,padding:"9px 0",border:"none",background:"none",fontWeight:tab===t[0]?700:400,color:tab===t[0]?C.primary:"#888",borderBottom:tab===t[0]?"2.5px solid "+C.primary:"2.5px solid transparent",cursor:"pointer",fontSize:14,fontFamily:"system-ui"}}>
+              {t[1]}
+            </button>
+          );})}
+        </div>
+        {tab==="pupil"?(
+          <div>
+            <div style={{marginBottom:14}}>
+              <label style={{fontSize:13,color:"#555",display:"block",marginBottom:5,fontWeight:500}}>Your class</label>
+              <select value={selectedTeacher} onChange={function(e){setSelectedTeacher(e.target.value);}} style={Object.assign({},inp,{color:selectedTeacher?"#1a1a1a":"#999"})}>
+                <option value="">{loadingTeachers?"Loading classes...":"— choose your class —"}</option>
+                {teachers.map(function(t){return <option key={t.id} value={t.id}>{t.name} {t.surname}{t.class_name?" ("+t.class_name+")":""}</option>;})}
+              </select>
+            </div>
+            <div style={{marginBottom:14}}>
+              <label style={{fontSize:13,color:"#555",display:"block",marginBottom:5,fontWeight:500}}>Your name</label>
+              <select value={selectedPupil} onChange={function(e){setSelectedPupil(e.target.value);}} disabled={!selectedTeacher||loadingPupils} style={Object.assign({},inp,{color:selectedPupil?"#1a1a1a":"#999"})}>
+                <option value="">{loadingPupils?"Loading pupils...":!selectedTeacher?"Select your class first":"— choose your name —"}</option>
+                {pupils.map(function(p){return <option key={p.id} value={p.id}>{p.surname}, {p.firstName}</option>;})}
+              </select>
+            </div>
+            <div style={{marginBottom:18}}>
+              <label style={{fontSize:13,color:"#555",display:"block",marginBottom:5,fontWeight:500}}>Password</label>
+              <input type="password" value={pw} onChange={function(e){setPw(e.target.value);}} onKeyDown={function(e){if(e.key==="Enter")handlePupilLogin();}} placeholder="Enter your password" style={inp}/>
+            </div>
+            {error&&<div style={{color:"#c53030",fontSize:13,marginBottom:12,background:"#fff5f5",padding:"8px 12px",borderRadius:6,border:"1px solid #fed7d7"}}>{error}</div>}
+            <button onClick={handlePupilLogin} disabled={loading} style={btn}>{loading?"Logging in...":"Log in"}</button>
+            <div style={{fontSize:12,color:"#aaa",textAlign:"center",marginTop:12}}>Forgotten your password? Ask your teacher.</div>
+          </div>
+        ):(
+          <div>
+            <div style={{marginBottom:14}}>
+              <label style={{fontSize:13,color:"#555",display:"block",marginBottom:5,fontWeight:500}}>Username</label>
+              <input type="text" value={username} onChange={function(e){setUsername(e.target.value);}} onKeyDown={function(e){if(e.key==="Enter")handleStaffLogin();}} placeholder="Your username" style={inp} autoCapitalize="none"/>
+            </div>
+            <div style={{marginBottom:18}}>
+              <label style={{fontSize:13,color:"#555",display:"block",marginBottom:5,fontWeight:500}}>Password</label>
+              <input type="password" value={pw} onChange={function(e){setPw(e.target.value);}} onKeyDown={function(e){if(e.key==="Enter")handleStaffLogin();}} placeholder="Your password" style={inp}/>
+            </div>
+            {error&&<div style={{color:"#c53030",fontSize:13,marginBottom:12,background:"#fff5f5",padding:"8px 12px",borderRadius:6,border:"1px solid #fed7d7"}}>{error}</div>}
+            <button onClick={handleStaffLogin} disabled={loading} style={btn}>{loading?"Logging in...":"Log in"}</button>
+            <div style={{fontSize:12,color:"#aaa",textAlign:"center",marginTop:12}}>Forgotten your password? Contact your admin.</div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Admin Dashboard ───────────────────────────────────────────────────────────
+function AdminDashboard({admin,allUsers,onLogout}){
+  const[users,setUsers]=useState(allUsers||[]);
+  const[tab,setTab]=useState("teachers");
+  const[showAdd,setShowAdd]=useState(false);
+  const[form,setForm]=useState({name:"",surname:"",username:"",password:"",class_name:""});
+  const[resetTarget,setResetTarget]=useState(null);
+  const[newPw,setNewPw]=useState("");
+  const[msg,setMsg]=useState("");
+  const[loading,setLoading]=useState(false);
+
+  const teachers=users.filter(function(u){return u.role==="teacher";});
+
+  const refreshUsers=async function(){
+    const all=await sbGetAllUsers();setUsers(all);
+  };
+
+  const handleAddTeacher=async function(){
+    if(!form.name.trim()||!form.surname.trim()||!form.username.trim()||!form.password.trim()){setMsg("Please fill in all fields.");return;}
+    setLoading(true);
+    try{
+      await sbCreateTeacher(form.name.trim(),form.surname.trim(),form.username.trim(),form.password.trim(),form.class_name.trim());
+      setMsg("Teacher account created!");setForm({name:"",surname:"",username:"",password:"",class_name:""});
+      setShowAdd(false);await refreshUsers();
+    }catch(e){setMsg("Error: username may already exist.");}
+    setLoading(false);
+  };
+
+  const handleResetPw=async function(){
+    if(!newPw.trim()){return;}
+    setLoading(true);
+    try{
+      await sbUpdatePassword(resetTarget,newPw.trim());
+      setMsg("Password reset successfully.");setResetTarget(null);setNewPw("");
+    }catch(e){setMsg("Error resetting password.");}
+    setLoading(false);
+  };
+
+  const inp={width:"100%",padding:"9px 11px",borderRadius:8,border:"1.5px solid #e2e8f0",fontSize:14,fontFamily:"system-ui",marginBottom:10};
+  return(
+    <div style={{minHeight:"100vh",background:"#f8f9fc",fontFamily:"system-ui"}}>
+      <div style={{background:"#4f46e5",color:"#fff",padding:"14px 20px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        <div style={{fontWeight:800,fontSize:18}}>Admin Dashboard</div>
+        <div style={{display:"flex",alignItems:"center",gap:12}}>
+          <span style={{fontSize:13,opacity:0.85}}>Logged in as {admin.name} {admin.surname}</span>
+          <button onClick={onLogout} style={{background:"rgba(255,255,255,0.18)",border:"none",color:"#fff",padding:"6px 14px",borderRadius:6,cursor:"pointer",fontSize:13}}>Log out</button>
+        </div>
+      </div>
+      <div style={{maxWidth:800,margin:"0 auto",padding:"24px 16px"}}>
+        {msg&&<div style={{background:"#ebf8ff",border:"1px solid #90cdf4",borderRadius:8,padding:"10px 14px",marginBottom:16,color:"#2b6cb0",fontSize:14}}>{msg}<button onClick={function(){setMsg("");}} style={{float:"right",background:"none",border:"none",cursor:"pointer",color:"#2b6cb0"}}>✕</button></div>}
+        <div style={{display:"flex",gap:8,marginBottom:20}}>
+          {["teachers"].map(function(t){return <button key={t} onClick={function(){setTab(t);}} style={{padding:"8px 18px",borderRadius:8,border:"none",background:tab===t?"#4f46e5":"#e8e8f0",color:tab===t?"#fff":"#333",fontWeight:tab===t?700:400,cursor:"pointer",fontFamily:"system-ui",fontSize:14}}>{t.charAt(0).toUpperCase()+t.slice(1)}</button>;})}
+        </div>
+        <div style={{background:"#fff",borderRadius:12,border:"1px solid #eee",overflow:"hidden"}}>
+          <div style={{padding:"16px 20px",borderBottom:"1px solid #eee",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <div style={{fontWeight:700,fontSize:16}}>Teacher Accounts ({teachers.length})</div>
+            <button onClick={function(){setShowAdd(!showAdd);}} style={{background:"#4f46e5",color:"#fff",border:"none",borderRadius:8,padding:"8px 16px",cursor:"pointer",fontWeight:600,fontSize:14}}>+ Add Teacher</button>
+          </div>
+          {showAdd&&(
+            <div style={{padding:"20px",borderBottom:"1px solid #eee",background:"#f8f9ff"}}>
+              <div style={{fontWeight:600,marginBottom:12,fontSize:15}}>New teacher account</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0 12px"}}>
+                <div><label style={{fontSize:12,color:"#666",display:"block",marginBottom:3}}>First name</label><input value={form.name} onChange={function(e){setForm(Object.assign({},form,{name:e.target.value}));}} placeholder="e.g. Ben" style={inp}/></div>
+                <div><label style={{fontSize:12,color:"#666",display:"block",marginBottom:3}}>Surname</label><input value={form.surname} onChange={function(e){setForm(Object.assign({},form,{surname:e.target.value}));}} placeholder="e.g. Macey" style={inp}/></div>
+                <div><label style={{fontSize:12,color:"#666",display:"block",marginBottom:3}}>Username</label><input value={form.username} onChange={function(e){setForm(Object.assign({},form,{username:e.target.value}));}} placeholder="e.g. bmacey" style={inp} autoCapitalize="none"/></div>
+                <div><label style={{fontSize:12,color:"#666",display:"block",marginBottom:3}}>Password</label><input value={form.password} onChange={function(e){setForm(Object.assign({},form,{password:e.target.value}));}} placeholder="Initial password" style={inp}/></div>
+                <div style={{gridColumn:"1/-1"}}><label style={{fontSize:12,color:"#666",display:"block",marginBottom:3}}>Class name (optional)</label><input value={form.class_name} onChange={function(e){setForm(Object.assign({},form,{class_name:e.target.value}));}} placeholder="e.g. 6M" style={inp}/></div>
+              </div>
+              <div style={{display:"flex",gap:8}}>
+                <button onClick={handleAddTeacher} disabled={loading} style={{background:"#4f46e5",color:"#fff",border:"none",borderRadius:8,padding:"9px 20px",cursor:"pointer",fontWeight:600,fontSize:14}}>{loading?"Creating...":"Create account"}</button>
+                <button onClick={function(){setShowAdd(false);}} style={{background:"#f0f0f0",color:"#333",border:"none",borderRadius:8,padding:"9px 20px",cursor:"pointer",fontSize:14}}>Cancel</button>
+              </div>
+            </div>
+          )}
+          {resetTarget&&(
+            <div style={{padding:"16px 20px",borderBottom:"1px solid #eee",background:"#fffbeb"}}>
+              <div style={{fontWeight:600,marginBottom:8,fontSize:14}}>Reset password for {(teachers.find(function(t){return t.id===resetTarget;})||{}).name}</div>
+              <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                <input value={newPw} onChange={function(e){setNewPw(e.target.value);}} placeholder="New password" style={{padding:"8px 12px",borderRadius:8,border:"1.5px solid #e2e8f0",fontSize:14,flex:1}}/>
+                <button onClick={handleResetPw} disabled={loading} style={{background:"#4f46e5",color:"#fff",border:"none",borderRadius:8,padding:"9px 16px",cursor:"pointer",fontWeight:600,fontSize:14}}>Reset</button>
+                <button onClick={function(){setResetTarget(null);setNewPw("");}} style={{background:"#f0f0f0",color:"#333",border:"none",borderRadius:8,padding:"9px 12px",cursor:"pointer",fontSize:14}}>Cancel</button>
+              </div>
+            </div>
+          )}
+          {teachers.length===0?(
+            <div style={{padding:"40px",textAlign:"center",color:"#888",fontSize:14}}>No teacher accounts yet. Add one above.</div>
+          ):(
+            <table style={{width:"100%",borderCollapse:"collapse"}}>
+              <thead><tr style={{background:"#f8f9fc"}}>{["Name","Username","Class","Actions"].map(function(h){return <th key={h} style={{padding:"10px 16px",textAlign:"left",fontSize:13,color:"#555",fontWeight:600,borderBottom:"1px solid #eee"}}>{h}</th>;})}</tr></thead>
+              <tbody>
+                {teachers.map(function(t){return(
+                  <tr key={t.id} style={{borderBottom:"1px solid #f5f5f5"}}>
+                    <td style={{padding:"11px 16px",fontSize:14}}>{t.name} {t.surname}</td>
+                    <td style={{padding:"11px 16px",fontSize:14,color:"#666"}}>{t.username}</td>
+                    <td style={{padding:"11px 16px",fontSize:14,color:"#666"}}>{t.class_name||"—"}</td>
+                    <td style={{padding:"11px 16px"}}>
+                      <button onClick={function(){setResetTarget(t.id);setMsg("");}} style={{background:"#f0f0f0",border:"none",borderRadius:6,padding:"5px 12px",cursor:"pointer",fontSize:13}}>Reset password</button>
+                    </td>
+                  </tr>
+                );})}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Pupil Management Modal ────────────────────────────────────────────────────
+function PupilManagementPanel({teacher,pupils,onRefresh}){
+  const[showAdd,setShowAdd]=useState(false);
+  const[form,setForm]=useState({name:"",surname:"",password:""});
+  const[resetTarget,setResetTarget]=useState(null);
+  const[newPw,setNewPw]=useState("");
+  const[msg,setMsg]=useState("");
+  const[loading,setLoading]=useState(false);
+  const[csvText,setCsvText]=useState("");
+  const[showCsv,setShowCsv]=useState(false);
+
+  const handleAddPupil=async function(){
+    if(!form.name.trim()||!form.surname.trim()||!form.password.trim()){setMsg("Please fill in all fields.");return;}
+    setLoading(true);
+    try{
+      await sbSavePupil(teacher.id,teacher.class_name,{name:form.name.trim()+" "+form.surname.trim(),password:form.password.trim()});
+      setMsg("Pupil added!");setForm({name:"",surname:"",password:""});setShowAdd(false);
+      await onRefresh();
+    }catch(e){setMsg("Error adding pupil.");}
+    setLoading(false);
+  };
+
+  const handleResetPw=async function(){
+    if(!newPw.trim())return;
+    setLoading(true);
+    try{
+      await sbUpdatePassword(resetTarget,newPw.trim());
+      setMsg("Password reset!");setResetTarget(null);setNewPw("");
+    }catch(e){setMsg("Error resetting password.");}
+    setLoading(false);
+  };
+
+  const handleDelete=async function(id,name){
+    if(!window.confirm("Remove "+name+" from your class? Their scores will also be deleted."))return;
+    setLoading(true);
+    try{await sbDeletePupil(id);await onRefresh();setMsg("Pupil removed.");}
+    catch(e){setMsg("Error removing pupil.");}
+    setLoading(false);
+  };
+
+  const handleCsvImport=async function(){
+    const lines=csvText.trim().split("
+").filter(function(l){return l.trim();});
+    if(!lines.length){setMsg("No data found. Enter one pupil per line: Firstname, Surname, Password");return;}
+    setLoading(true);let added=0;let errors=0;
+    for(const line of lines){
+      const parts=line.split(",").map(function(p){return p.trim();});
+      if(parts.length<2)continue;
+      const firstName=parts[0],surname=parts[1],password=parts[2]||"sats2025";
+      try{await sbSavePupil(teacher.id,teacher.class_name,{name:firstName+" "+surname,password});added++;}
+      catch(e){errors++;}
+    }
+    await onRefresh();setCsvText("");setShowCsv(false);
+    setMsg("Imported "+added+" pupils"+(errors>0?" ("+errors+" errors)":"")+".");
+    setLoading(false);
+  };
+
+  const inp={width:"100%",padding:"9px 11px",borderRadius:8,border:"1.5px solid #e2e8f0",fontSize:14,fontFamily:"system-ui",marginBottom:10};
+  return(
+    <div>
+      {msg&&<div style={{background:"#ebf8ff",border:"1px solid #90cdf4",borderRadius:8,padding:"10px 14px",marginBottom:14,color:"#2b6cb0",fontSize:13,display:"flex",justifyContent:"space-between"}}><span>{msg}</span><button onClick={function(){setMsg("");}} style={{background:"none",border:"none",cursor:"pointer",color:"#2b6cb0"}}>✕</button></div>}
+      <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
+        <button onClick={function(){setShowAdd(!showAdd);setShowCsv(false);}} style={{background:"#4f46e5",color:"#fff",border:"none",borderRadius:8,padding:"8px 16px",cursor:"pointer",fontWeight:600,fontSize:14}}>+ Add pupil</button>
+        <button onClick={function(){setShowCsv(!showCsv);setShowAdd(false);}} style={{background:"#f0f0f0",color:"#333",border:"none",borderRadius:8,padding:"8px 16px",cursor:"pointer",fontSize:14}}>📋 Batch import (CSV)</button>
+      </div>
+      {showAdd&&(
+        <div style={{background:"#f8f9ff",borderRadius:10,padding:"16px",marginBottom:16,border:"1px solid #e8e8f5"}}>
+          <div style={{fontWeight:600,marginBottom:10,fontSize:14}}>Add a pupil</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"0 10px"}}>
+            <div><label style={{fontSize:12,color:"#666",display:"block",marginBottom:3}}>First name</label><input value={form.name} onChange={function(e){setForm(Object.assign({},form,{name:e.target.value}));}} placeholder="e.g. Emma" style={inp}/></div>
+            <div><label style={{fontSize:12,color:"#666",display:"block",marginBottom:3}}>Surname</label><input value={form.surname} onChange={function(e){setForm(Object.assign({},form,{surname:e.target.value}));}} placeholder="e.g. Smith" style={inp}/></div>
+            <div><label style={{fontSize:12,color:"#666",display:"block",marginBottom:3}}>Password</label><input value={form.password} onChange={function(e){setForm(Object.assign({},form,{password:e.target.value}));}} placeholder="e.g. sats2025" style={inp}/></div>
+          </div>
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={handleAddPupil} disabled={loading} style={{background:"#4f46e5",color:"#fff",border:"none",borderRadius:8,padding:"8px 18px",cursor:"pointer",fontWeight:600,fontSize:14}}>{loading?"Adding...":"Add pupil"}</button>
+            <button onClick={function(){setShowAdd(false);}} style={{background:"#f0f0f0",color:"#333",border:"none",borderRadius:8,padding:"8px 14px",cursor:"pointer",fontSize:14}}>Cancel</button>
+          </div>
+        </div>
+      )}
+      {showCsv&&(
+        <div style={{background:"#fffef5",borderRadius:10,padding:"16px",marginBottom:16,border:"1px solid #f5e8b0"}}>
+          <div style={{fontWeight:600,marginBottom:6,fontSize:14}}>Batch import from CSV</div>
+          <div style={{fontSize:12,color:"#888",marginBottom:8}}>One pupil per line: <code>Firstname, Surname, Password</code> — password is optional (defaults to "sats2025")</div>
+          <textarea value={csvText} onChange={function(e){setCsvText(e.target.value);}} rows={6} placeholder={"Emma, Smith, sunshine7
+Liam, Jones, football3
+Olivia, Chen"} style={{width:"100%",padding:"10px",borderRadius:8,border:"1.5px solid #e2e8f0",fontSize:13,fontFamily:"monospace",marginBottom:10,resize:"vertical"}}/>
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={handleCsvImport} disabled={loading||!csvText.trim()} style={{background:"#4f46e5",color:"#fff",border:"none",borderRadius:8,padding:"8px 18px",cursor:"pointer",fontWeight:600,fontSize:14}}>{loading?"Importing...":"Import"}</button>
+            <button onClick={function(){setShowCsv(false);setCsvText("");}} style={{background:"#f0f0f0",color:"#333",border:"none",borderRadius:8,padding:"8px 14px",cursor:"pointer",fontSize:14}}>Cancel</button>
+          </div>
+        </div>
+      )}
+      {resetTarget&&(
+        <div style={{background:"#fffbeb",borderRadius:10,padding:"14px",marginBottom:14,border:"1px solid #fcd34d"}}>
+          <div style={{fontWeight:600,marginBottom:8,fontSize:14}}>Reset password for {(pupils.find(function(p){return p.id===resetTarget;})||{}).firstName||"pupil"}</div>
+          <div style={{display:"flex",gap:8}}>
+            <input value={newPw} onChange={function(e){setNewPw(e.target.value);}} placeholder="New password" style={{flex:1,padding:"8px 12px",borderRadius:8,border:"1.5px solid #e2e8f0",fontSize:14}}/>
+            <button onClick={handleResetPw} disabled={loading} style={{background:"#4f46e5",color:"#fff",border:"none",borderRadius:8,padding:"8px 16px",cursor:"pointer",fontWeight:600,fontSize:14}}>Save</button>
+            <button onClick={function(){setResetTarget(null);setNewPw("");}} style={{background:"#f0f0f0",color:"#333",border:"none",borderRadius:8,padding:"8px 12px",cursor:"pointer",fontSize:14}}>Cancel</button>
+          </div>
+        </div>
+      )}
+      {pupils.length===0?(
+        <div style={{textAlign:"center",padding:"32px",color:"#999",fontSize:14}}>No pupils yet — add some above.</div>
+      ):(
+        <table style={{width:"100%",borderCollapse:"collapse"}}>
+          <thead><tr style={{background:"#f8f9fc"}}>{["Name","Password","Actions"].map(function(h){return <th key={h} style={{padding:"9px 14px",textAlign:"left",fontSize:13,color:"#555",fontWeight:600,borderBottom:"1px solid #eee"}}>{h}</th>;})}</tr></thead>
+          <tbody>
+            {pupils.slice().sort(function(a,b){return a.surname.localeCompare(b.surname);}).map(function(p){return(
+              <tr key={p.id} style={{borderBottom:"1px solid #f5f5f5"}}>
+                <td style={{padding:"10px 14px",fontSize:14}}>{p.surname}, {p.firstName}</td>
+                <td style={{padding:"10px 14px",fontSize:13,color:"#888",fontFamily:"monospace"}}>{p.password}</td>
+                <td style={{padding:"10px 14px",display:"flex",gap:6}}>
+                  <button onClick={function(){setResetTarget(p.id);setMsg("");}} style={{background:"#f0f0f0",border:"none",borderRadius:6,padding:"4px 10px",cursor:"pointer",fontSize:12}}>Reset password</button>
+                  <button onClick={function(){handleDelete(p.id,p.firstName+" "+p.surname);}} style={{background:"#fff5f5",color:"#c53030",border:"1px solid #fed7d7",borderRadius:6,padding:"4px 10px",cursor:"pointer",fontSize:12}}>Remove</button>
+                </td>
+              </tr>
+            );})}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 }
@@ -2207,8 +2541,10 @@ function App(){
   const handleLogout=function(){setSession(null);};
 
   const updateUser=async function(updated,completedAssignment){
-    const nu=session.users.map(function(u){return u.name===updated.name?updated:u;});
-    await save(session.key,nu);
+    if(updated.id&&updated.topicProgress){
+      sbSaveScores(updated.id,updated.topicProgress).catch(function(e){console.error("Score save:",e);});
+    }
+    const nu=session.users.map(function(u){return u.id===updated.id?updated:u;});
     let newAssignments=assignments;
     if(completedAssignment){
       newAssignments=assignments.map(function(a){
@@ -2222,7 +2558,6 @@ function App(){
   };
 
   const updatePupils=async function(np){
-    await save(session.key,np);
     setSession(function(s){return Object.assign({},s,{users:np});});
   };
 
@@ -2233,6 +2568,7 @@ function App(){
   if(!session)return <LoginScreen onLogin={handleLogin}/>;
   if(session.role==="pupil")return <PupilDashboard user={session.user} onUpdate={updateUser} onLogout={handleLogout} assignments={assignments} streakSettings={streakSettings}/>;
   if(session.role==="teacher")return <TeacherDashboard teacher={session.user} pupils={session.users.filter(function(u){return u.role!=="teacher";})} onUpdatePupils={updatePupils} onLogout={handleLogout} assignments={assignments} onSaveAssignments={saveAssignments} streakSettings={streakSettings} onSaveStreakSettings={saveStreakSettings} notes={notes} onSaveNotes={saveNotes}/>;
+  if(session.role==="admin")return <AdminDashboard admin={session.user} allUsers={session.users} onLogout={handleLogout}/>;
   return null;
 }
 
