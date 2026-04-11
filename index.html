@@ -2440,8 +2440,7 @@ function PupilManagementPanel({teacher,pupils,onRefresh}){
   };
 
   const handleCsvImport=async function(){
-    const lines=csvText.trim().split("
-").filter(function(l){return l.trim();});
+    const lines=csvText.trim().split("\n").filter(function(l){return l.trim();});
     if(!lines.length){setMsg("No data found. Enter one pupil per line: Firstname, Surname, Password");return;}
     setLoading(true);let added=0;let errors=0;
     for(const line of lines){
