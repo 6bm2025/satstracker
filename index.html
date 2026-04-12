@@ -2165,6 +2165,7 @@ function LoginScreen({onLogin}){
   const[showPw,setShowPw]=useState(false);
   const[classSearch,setClassSearch]=useState("");
   const[showClassList,setShowClassList]=useState(false);
+  const[hoveredClass,setHoveredClass]=useState(null);
 
   useEffect(function(){
     sbGetAllTeachers().then(function(ts){setTeachers(ts);setLoadingTeachers(false);}).catch(function(){setError("Could not connect — check your internet connection.");setLoadingTeachers(false);});
@@ -2253,7 +2254,7 @@ function LoginScreen({onLogin}){
                     return(
                       <div style={{position:"absolute",zIndex:20,left:0,right:0,border:"1.5px solid #e2e8f0",borderTop:"none",borderRadius:"0 0 8px 8px",background:"#fff",boxShadow:"0 4px 12px rgba(0,0,0,0.1)",maxHeight:200,overflowY:"auto"}}>
                         {filtered.map(function(t){return(
-                          <div key={t.id} onClick={function(){setSelectedTeacher(t.id);setClassSearch("");setShowClassList(false);}} style={{padding:"10px 14px",cursor:"pointer",fontSize:14,borderBottom:"1px solid #f3f4f6"}} onMouseEnter={function(e){e.target.style.background='#f0f4ff';}} onMouseLeave={function(e){e.target.style.background='';}}>
+                          <div key={t.id} onClick={function(){setSelectedTeacher(t.id);setClassSearch("");setShowClassList(false);}} style={{padding:"10px 14px",cursor:"pointer",fontSize:14,borderBottom:"1px solid #f3f4f6",background:hoveredClass===t.id?"#f0f4ff":"#fff"}} onMouseEnter={function(){setHoveredClass(t.id);}} onMouseLeave={function(){setHoveredClass(null);}}>
                             <span style={{fontWeight:700}}>{t.class_name||t.name+" "+t.surname}</span>
                             {t.class_name&&<span style={{color:"#888",fontSize:12,marginLeft:6}}>{t.name} {t.surname}</span>}
                           </div>
