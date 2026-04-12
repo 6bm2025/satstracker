@@ -570,14 +570,13 @@ function ColHintShortMult({top,mult,answer,hideAnswer}){
   const maxLen=Math.max(tS.length,aS.length);
   const ansDigits=aS.split("").map(Number);
   const ansLen=ansDigits.length;
-  // compute carries per column (indexed from right, 0=ones)
-  const carries=new Array(ansLen+1).fill(0);
+  // compute carries per column: carries[k] = carry produced when computing digit k from right
+  const carries=new Array(tS.length+2).fill(0);
   let c=0;
   for(let i=tS.length-1;i>=0;i--){
     const prod=parseInt(tS[i])*mult+c;
     c=Math.floor(prod/10);
     carries[tS.length-i]=c;
-    c=Math.floor(prod/10);
   }
   const DF="system-ui,sans-serif";
   function digitCell(d,pos,hide){
@@ -608,7 +607,7 @@ function ColHintShortMult({top,mult,answer,hideAnswer}){
       <div style={{borderTop:"2px solid #aaa",margin:"2px 0",marginLeft:CW}}/>
       <div style={{display:"flex"}}>
         <div style={{width:CW,flexShrink:0}}/>
-        {carries.slice(0,ansLen).map(function(cv,i){const pos=ansLen-1-i;return(<div key={i} style={{width:CW,height:18,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:900,fontFamily:DF,color:cv?(HC[pos]||"#888"):"transparent"}}>{cv||""}</div>);})}
+        {carries.slice(1,ansLen+1).map(function(cv,i){const pos=ansLen-1-i;return(<div key={i} style={{width:CW,height:18,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:900,fontFamily:DF,color:cv?(HC[pos]||"#888"):"transparent"}}>{cv||""}</div>);})}
       </div>
     </div>
   );
@@ -1127,8 +1126,8 @@ function FracSubVisual({n1,d1,n2,d2,hideAnswer}){
   const lineY=midY+2;
   const numY=midY-FS_SVG*0.5-3;
   const denY=midY+FS_SVG*0.9+3;
-  const topY=PAD+2;
-  const botY=PAD+fracH-2;
+  const topY=numY-4;
+  const botY=denY+4;
   function fracSVG(n,d,col,cx){
     const lw=String(Math.max(n,d)).length*12+8;
     return(<g>
