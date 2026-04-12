@@ -148,12 +148,33 @@ function genQ(topic,usedKeys){
           ];
           const r=pick(variants)();q={question:r.q,answer:r.a,leftBox:false,topic,keyNum:r.k,colHint:{type:"colAdd",nums:[r.na,r.nb],answer:r.a},dynamicHint:r.dh};break;}
         case"place-value":{
-          const T=rnd(1,9),H=rnd(1,9),t=rnd(1,9),o=rnd(1,9),n=T*1000+H*100+t*10+o,mv=pick(["h","t","o"]);
-          let qstr,ans;
-          if(mv==="h"){qstr=n.toLocaleString()+" = "+T+",000 + ___ + "+t+"0 + "+o;ans=H*100;}
-          else if(mv==="t"){qstr=n.toLocaleString()+" = "+T+",000 + "+H+"00 + ___ + "+o;ans=t*10;}
-          else{qstr=n.toLocaleString()+" = "+T+",000 + "+H+"00 + "+t+"0 + ___";ans=o;}
-          q={question:qstr,answer:ans,leftBox:false,topic,keyNum:n,dynamicHint:n.toLocaleString()+" = "+T+",000 + "+H+"00 + "+t+"0 + "+o,pvHint:{num:n,missingPos:mv}};break;}
+          const variant=pick(["4digit","5digit","decimal"]);
+          let qstr,ans,n,pvH;
+          if(variant==="5digit"){
+            const TTh=rnd(1,9),Th=rnd(1,9),H=rnd(1,9),t=rnd(0,9),o=rnd(0,9);
+            n=TTh*10000+Th*1000+H*100+t*10+o;
+            const mv=pick(["TTh","Th","H"]);
+            if(mv==="TTh"){qstr=n.toLocaleString()+" = ___ + "+Th+",000 + "+H+"00 + "+t+"0 + "+o;ans=TTh*10000;}
+            else if(mv==="Th"){qstr=n.toLocaleString()+" = "+TTh*10+",000 + ___ + "+H+"00 + "+t+"0 + "+o;ans=Th*1000;}
+            else{qstr=n.toLocaleString()+" = "+TTh*10+",000 + "+Th+",000 + ___ + "+t+"0 + "+o;ans=H*100;}
+            pvH={num:n,missingPos:mv==="TTh"?"TTh":mv==="Th"?"Th":"h"};
+          } else if(variant==="decimal"){
+            const ones=rnd(1,9),tenths=rnd(1,9),hundredths=rnd(1,9);
+            n=ones+tenths/10+hundredths/100;
+            const mv=pick(["tenths","hundredths"]);
+            if(mv==="tenths"){qstr=n.toFixed(2)+" = "+ones+" + ___ + "+hundredths+"/100";ans=parseFloat((tenths/10).toFixed(1));}
+            else{qstr=n.toFixed(2)+" = "+ones+" + "+tenths+"/10 + ___";ans=parseFloat((hundredths/100).toFixed(2));}
+            pvH={num:n,missingPos:"o"};
+          } else {
+            const T=rnd(1,9),H=rnd(1,9),t=rnd(1,9),o=rnd(1,9);
+            n=T*1000+H*100+t*10+o;
+            const mv=pick(["h","t","o"]);
+            if(mv==="h"){qstr=n.toLocaleString()+" = "+T+",000 + ___ + "+t+"0 + "+o;ans=H*100;}
+            else if(mv==="t"){qstr=n.toLocaleString()+" = "+T+",000 + "+H+"00 + ___ + "+o;ans=t*10;}
+            else{qstr=n.toLocaleString()+" = "+T+",000 + "+H+"00 + "+t+"0 + ___";ans=o;}
+            pvH={num:n,missingPos:mv};
+          }
+          q={question:qstr,answer:ans,leftBox:false,topic,keyNum:Math.round(n),dynamicHint:String(qstr),pvHint:pvH};break;}
         case"missing-add":{const b=rnd(10,99),a=rnd(100,999),s=a+b;q=pick([{question:"___ + "+b+" = "+s,answer:a,leftBox:false,topic,keyNum:s,dynamicHint:s+" - "+b+" = "+a},{question:a+" + ___ = "+s,answer:b,leftBox:false,topic,keyNum:s,dynamicHint:s+" - "+a+" = "+b}]);break;}
         case"subtraction":{
           const variants=[
@@ -161,23 +182,40 @@ function genQ(topic,usedKeys){
             ()=>{const a=rnd(10000,99999),b=rnd(1000,a-1);return{q:a.toLocaleString()+" - "+b.toLocaleString()+" =",a:a-b,k:a,na:a,nb:b,dh:a.toLocaleString()+" - "+b.toLocaleString()+"\n= "+(a-b).toLocaleString()};}
           ];
           const r=pick(variants)();q={question:r.q,answer:r.a,leftBox:false,topic,keyNum:r.k,colHint:{type:"colSub",top:r.na,bot:r.nb,answer:r.a},dynamicHint:r.dh};break;}
-        case"sub-decimal":{const a=rnd(10,99),b=parseFloat((rnd(1,9)+rnd(1,9)/10).toFixed(1));q={question:a+" - "+b+" =",answer:parseFloat((a-b).toFixed(1)),leftBox:false,topic,keyNum:a,dynamicHint:a+".0 - "+b+"\n= "+parseFloat((a-b).toFixed(1)),decHint:{top:a,bot:b,answer:parseFloat((a-b).toFixed(1))}};break;}
+        case"sub-decimal":{
+          const use2dp=Math.random()<0.35;
+          const a=rnd(10,99);
+          const b=use2dp?parseFloat((rnd(1,8)+rnd(1,9)/10+rnd(1,9)/100).toFixed(2)):parseFloat((rnd(1,9)+rnd(1,9)/10).toFixed(1));
+          const ans=parseFloat((a-b).toFixed(2));
+          q={question:a+" - "+b+" =",answer:ans,leftBox:false,topic,keyNum:a,dynamicHint:a+(use2dp?".00":".0")+" - "+b+"\n= "+ans,decHint:{top:a,bot:b,answer:ans}};break;}
         case"missing-sub":{const a=rnd(100,999),b=rnd(10,a-10),d=a-b;q=pick([{question:a+" - ___ = "+d,answer:b,leftBox:false,topic,keyNum:a,dynamicHint:a+" - "+d+" = "+b},{question:"___ - "+b+" = "+d,answer:a,leftBox:false,topic,keyNum:a,dynamicHint:d+" + "+b+" = "+a}]);break;}
         case"multiply-three":{
           const pairs=[[2,4],[2,5],[3,4],[3,5],[4,5],[2,6],[3,6]];const pair=pick(pairs);const x=pair[0],y=pair[1],z=rnd(2,9);
           q={question:x+" × "+y+" × "+z+" =",answer:x*y*z,leftBox:false,topic,keyNum:x*y*z,dynamicHint:"Step 1: "+x+" × "+y+" = "+(x*y)+"\nStep 2: "+(x*y)+" × "+z+" = "+(x*y*z)};break;}
         case"multiply-powers":{
           const p=pick([10,100,1000]);
-          const useDecimal=p>=100&&Math.random()<0.5;
-          const n=useDecimal?parseFloat((rnd(1,9)+rnd(1,9)/10).toFixed(1)):rnd(2,99);
-          const ans=parseFloat((n*p).toFixed(2));
+          const decType=Math.random();
+          let n;
+          if(p===10){n=decType<0.4?parseFloat((rnd(1,9)+rnd(1,9)/10).toFixed(1)):decType<0.7?parseFloat((rnd(1,9)+rnd(1,9)/10+rnd(1,9)/100).toFixed(2)):rnd(2,99);}
+          else if(p===100){n=decType<0.4?parseFloat((rnd(1,9)+rnd(1,9)/10).toFixed(1)):decType<0.7?parseFloat((rnd(1,9)+rnd(1,9)/10+rnd(1,9)/100).toFixed(2)):rnd(2,99);}
+          else{n=decType<0.3?parseFloat((rnd(1,9)+rnd(1,9)/10).toFixed(1)):decType<0.6?parseFloat((rnd(1,9)+rnd(1,9)/10+rnd(1,9)/100).toFixed(2)):rnd(2,99);}
+          const ans=parseFloat((n*p).toFixed(3));
           const shift=Math.log10(p);
           q={question:n+" × "+p+" =",answer:ans,leftBox:false,topic,keyNum:Math.round(n*10),dynamicHint:n+" × "+p+"\nMove digits "+Math.abs(shift)+" place"+(Math.abs(shift)>1?"s":"")+" left\n= "+ans,pvGridHint:{before:n,after:ans,shift:shift}};break;}
         case"divide-powers":{
-          const p=pick([10,100,1000]),a=rnd(1,99);
-          const top=a*p;const ans=parseFloat((a).toFixed(3));
+          const p=pick([10,100,1000]);
+          const useDecTop=Math.random()<0.4;
+          let top,ans;
+          if(useDecTop&&p>=10){
+            const dp=p===10?1:p===100?2:3;
+            const intPart=rnd(1,9),decPart=rnd(1,9);
+            top=parseFloat((intPart+decPart/10).toFixed(1))*p;
+            ans=parseFloat((intPart+decPart/10).toFixed(dp));
+          } else {
+            const a=rnd(1,99);top=a*p;ans=parseFloat((a).toFixed(3));
+          }
           const shift=-Math.log10(p);
-          q={question:top.toLocaleString()+" ÷ "+p+" =",answer:ans,leftBox:false,topic,keyNum:top,dynamicHint:top+" ÷ "+p+"\nMove digits "+shift+" place"+(shift>1?"s":"")+" right\n= "+ans,pvGridHint:{before:top,after:ans,shift:shift}};break;}
+          q={question:(Number.isInteger(top)?top.toLocaleString():top)+" ÷ "+p+" =",answer:ans,leftBox:false,topic,keyNum:Math.round(top),dynamicHint:top+" ÷ "+p+"\nMove digits "+Math.abs(shift)+" place"+(Math.abs(shift)>1?"s":"")+" right\n= "+ans,pvGridHint:{before:top,after:ans,shift:shift}};break;}
         case"short-multiplication":{
           const mv=rnd(2,9),a=rnd(100,999),ans=a*mv;
           q={question:a.toLocaleString()+" × "+mv+" =",answer:ans,leftBox:false,topic,keyNum:a,colHint:{type:"shortMult",top:a,mult:mv,answer:ans},dynamicHint:"  "+a+"\n× "+mv+"\n"+"─".repeat(5)+"\n= "+ans.toLocaleString()};break;}
@@ -203,35 +241,69 @@ function genQ(topic,usedKeys){
           const dv=Math.random()<0.5?pick(PRIMES):pick(COMPOSITES),a=rnd(100,999),n=dv*a;
           const working=n.toLocaleString()+" ÷ "+dv+":\nEstimate multiples of "+dv+"\nAnswer = "+a;
           q={question:n.toLocaleString()+" ÷ "+dv,answer:a,leftBox:false,topic:"long-division",isTwoMark:true,working,divHint:{dividend:n,divisor:dv},dynamicHint:working,keyNum:n};break;}
-        case"division-remainder":{const dv=rnd(2,9),a=rnd(10,99),r=rnd(1,dv-1),n=dv*a+r;q={question:n+" ÷ "+dv+" =",answer:parseFloat((n/dv).toFixed(1)),leftBox:false,topic,keyNum:n,divHint:{dividend:n,divisor:dv},dynamicHint:n+" ÷ "+dv+" = "+a+" remainder "+r+"\n= "+parseFloat((n/dv).toFixed(1))};break;}
+        case"division-remainder":{const dv=rnd(2,9),a=rnd(10,99),r=rnd(1,dv-1),n=dv*a+r;const ansStr=a+" remainder "+r;q={question:n+" ÷ "+dv+" =",answer:ansStr,leftBox:false,topic,isText:true,keyNum:n,divHint:{dividend:n,divisor:dv},dynamicHint:n+" ÷ "+dv+" = "+a+" remainder "+r};break;}
         case"fractions-add":{
-          const d1=pick([3,4,5,6,8,10]),opts=[3,4,5,6,8,10].filter(x=>x!==d1),d2=pick(opts),n1=rnd(1,d1-1),n2=rnd(1,d2-1);
+          const d1=pick([3,4,5,6,8,10,12]),opts=[3,4,5,6,8,10,12].filter(x=>x!==d1),d2=pick(opts),n1=rnd(1,d1-1),n2=rnd(1,d2-1);
           const lcd=d1*d2/gcd(d1,d2),m1=lcd/d1,m2=lcd/d2,nt=n1*m1+n2*m2;
           const sn=simplify(nt,lcd);
           const ans=sn[1]===1?String(sn[0]):sn[0]>sn[1]?Math.floor(sn[0]/sn[1])+" "+(sn[0]%sn[1])+"/"+sn[1]:sn[0]+"/"+sn[1];
           const dh=n1+"/"+d1+" + "+n2+"/"+d2+"\nCommon denominator = "+lcd+"\n= "+(n1*m1)+"/"+lcd+" + "+(n2*m2)+"/"+lcd+"\n= "+nt+"/"+lcd+(sn[0]!==nt||sn[1]!==lcd?" = "+ans:"");
           q={question:n1+"/"+d1+" + "+n2+"/"+d2+" =",answer:ans,leftBox:false,topic,isText:true,keyNum:d1*10+d2,dynamicHint:dh,fracAddHint:{n1,d1,n2,d2}};break;}
         case"fractions-add-mixed":{
-          const d=pick([3,4,5,6,8]),w1=rnd(1,4),w2=rnd(1,4),n1=rnd(1,d-1),n2=rnd(1,d-1);
-          let tN=n1+n2,tW=w1+w2;if(tN>=d){tW+=Math.floor(tN/d);tN=tN%d;}
-          const ans=tN===0?String(tW):tW+" "+tN+"/"+d;
-          const dh="Wholes: "+w1+" + "+w2+" = "+(w1+w2)+"\nFractions: "+n1+"/"+d+" + "+n2+"/"+d+" = "+(n1+n2)+"/"+d+(n1+n2>=d?" = 1 "+(n1+n2-d)+"/"+d+" (carry 1)":"")+"\nAnswer = "+ans;
-          q={question:w1+" "+n1+"/"+d+" + "+w2+" "+n2+"/"+d+" =",answer:ans,leftBox:false,topic,isText:true,keyNum:d*10+w1,dynamicHint:dh,fracMixedHint:{w1,n1,d1:d,w2,n2,d2:d}};break;}
+          const useDiff=Math.random()<0.4;
+          let w1,w2,n1,n2,d1,d2,ans,dh,fracHint;
+          if(useDiff){
+            d1=pick([2,3,4,5,6]);const d2opts=[2,3,4,5,6].filter(x=>x!==d1);d2=pick(d2opts);
+            w1=rnd(1,4);w2=rnd(1,4);n1=rnd(1,d1-1);n2=rnd(1,d2-1);
+            const lcd=d1*d2/gcd(d1,d2),m1=lcd/d1,m2=lcd/d2;
+            const en1=n1*m1,en2=n2*m2;let fN=en1+en2,wSum=w1+w2;
+            const carry=Math.floor(fN/lcd);fN=fN%lcd;wSum+=carry;
+            const s=fN>0?simplify(fN,lcd):[0,1];
+            ans=fN===0?String(wSum):wSum+" "+s[0]+"/"+s[1];
+            dh="Wholes: "+w1+" + "+w2+" = "+wSum+"\nFractions: "+n1+"/"+d1+" + "+n2+"/"+d2+"\nCommon denom = "+lcd+"\n= "+en1+"/"+lcd+" + "+en2+"/"+lcd+" = "+(en1+en2)+"/"+lcd+(carry?" = "+carry+" "+fN+"/"+lcd+" (carry "+carry+")":"")+"\nAnswer = "+ans;
+            fracHint={w1,n1,d1,w2,n2,d2};
+          } else {
+            const d=pick([3,4,5,6,8]);d1=d;d2=d;
+            w1=rnd(1,4);w2=rnd(1,4);n1=rnd(1,d-1);n2=rnd(1,d-1);
+            let tN=n1+n2,tW=w1+w2;if(tN>=d){tW+=Math.floor(tN/d);tN=tN%d;}
+            ans=tN===0?String(tW):tW+" "+tN+"/"+d;
+            dh="Wholes: "+w1+" + "+w2+" = "+(w1+w2)+"\nFractions: "+n1+"/"+d+" + "+n2+"/"+d+" = "+(n1+n2)+"/"+d+(n1+n2>=d?" = 1 "+(n1+n2-d)+"/"+d+" (carry 1)":"")+"\nAnswer = "+ans;
+            fracHint={w1,n1,d1:d,w2,n2,d2:d};
+          }
+          q={question:w1+" "+n1+"/"+d1+" + "+w2+" "+n2+"/"+d2+" =",answer:ans,leftBox:false,topic,isText:true,keyNum:d1*10+w1,dynamicHint:dh,fracMixedHint:fracHint};break;}
         case"fractions-subtract":{
           const d=pick([5,6,8,9,10,12]),n1=rnd(2,d-1),n2=rnd(1,n1-1);
           const s=simplify(n1-n2,d);const ans=s[0]+"/"+s[1];
           const dh=n1+"/"+d+" - "+n2+"/"+d+" = "+(n1-n2)+"/"+d+(s[0]!==n1-n2||s[1]!==d?" = "+ans+" (simplified)":"");
           q={question:n1+"/"+d+" - "+n2+"/"+d+" =",answer:ans,leftBox:false,topic,isText:true,keyNum:d*10+n1,dynamicHint:dh,fracSubHint:{n1,d1:d,n2,d2:d}};break;}
         case"fractions-subtract-mixed":{
-          const d=pick([4,5,6,8]),w1=rnd(2,5),n1=rnd(1,d-1),w2=rnd(1,w1-1),n2=rnd(1,d-1);
-          let rn=n1-n2,rw=w1-w2;let borrowed=false;
-          if(rn<0){rw--;rn+=d;borrowed=true;}
-          const s=simplify(rn,d);
-          const ans=rn===0?String(rw):(rw===0?s[0]+"/"+s[1]:rw+" "+s[0]+"/"+s[1]);
-          let dh=w1+" "+n1+"/"+d+" - "+w2+" "+n2+"/"+d;
-          if(borrowed)dh+="\nBorrow 1 from "+w1+": becomes "+(w1-1)+" "+(n1+d)+"/"+d+"\n"+(w1-1)+" "+(n1+d)+"/"+d+" - "+w2+" "+n2+"/"+d;
-          dh+="\n= "+ans;
-          q={question:w1+" "+n1+"/"+d+" - "+w2+" "+n2+"/"+d+" =",answer:ans,leftBox:false,topic,isText:true,keyNum:d*10+w1,dynamicHint:dh,fracSubMixedHint:{w1,n1,d,w2,n2,borrowed}};break;}
+          const useDiff=Math.random()<0.3;
+          let w1,w2,n1,n2,d1f,d2f,ans,dh,fracHint;
+          if(useDiff){
+            d1f=pick([3,4,5,6]);const d2opts=[3,4,5,6].filter(x=>x!==d1f);d2f=pick(d2opts);
+            w1=rnd(2,5);w2=rnd(1,w1-1);n1=rnd(1,d1f-1);n2=rnd(1,d2f-1);
+            const lcd=d1f*d2f/gcd(d1f,d2f),m1=lcd/d1f,m2=lcd/d2f;
+            let en1=n1*m1,en2=n2*m2,rw=w1-w2;let borrowed=false;
+            if(en1<en2){rw--;en1+=lcd;borrowed=true;}
+            const rn=en1-en2;const s=rn>0?simplify(rn,lcd):[0,1];
+            ans=rn===0?String(rw):(rw===0?s[0]+"/"+s[1]:rw+" "+s[0]+"/"+s[1]);
+            dh=w1+" "+n1+"/"+d1f+" - "+w2+" "+n2+"/"+d2f+"\nCommon denom = "+lcd;
+            if(borrowed)dh+="\nBorrow 1: "+w1+" "+n1+"/"+d1f+" → "+(w1-1)+" "+(n1*m1+lcd)+"/"+lcd;
+            dh+="\n= "+ans;
+            fracHint={w1,n1,d:lcd,w2,n2:n2*m2,borrowed};
+          } else {
+            const d=pick([4,5,6,8]);d1f=d;d2f=d;
+            w1=rnd(2,5);w2=rnd(1,w1-1);n1=rnd(1,d-1);n2=rnd(1,d-1);
+            let rn=n1-n2,rw=w1-w2;let borrowed=false;
+            if(rn<0){rw--;rn+=d;borrowed=true;}
+            const s=simplify(rn,d);
+            ans=rn===0?String(rw):(rw===0?s[0]+"/"+s[1]:rw+" "+s[0]+"/"+s[1]);
+            let dh2=w1+" "+n1+"/"+d+" - "+w2+" "+n2+"/"+d;
+            if(borrowed)dh2+="\nBorrow 1 from "+w1+": becomes "+(w1-1)+" "+(n1+d)+"/"+d+"\n"+(w1-1)+" "+(n1+d)+"/"+d+" - "+w2+" "+n2+"/"+d;
+            dh2+="\n= "+ans;dh=dh2;
+            fracHint={w1,n1,d,w2,n2,borrowed};
+          }
+          q={question:w1+" "+n1+"/"+d1f+" - "+w2+" "+n2+"/"+d2f+" =",answer:ans,leftBox:false,topic,isText:true,keyNum:d1f*10+w1,dynamicHint:dh,fracSubMixedHint:fracHint};break;}
         case"fractions-multiply":{
           const d=pick([3,4,5,6,8,10]),n=rnd(1,d-1),w=rnd(2,10)*d;
           q={question:n+"/"+d+" of "+w+" =",answer:n*w/d,leftBox:false,topic,keyNum:w,dynamicHint:"Step 1: "+w+" ÷ "+d+" = "+(w/d)+"\nStep 2: "+(w/d)+" × "+n+" = "+(n*w/d)};break;}
@@ -240,16 +312,26 @@ function genQ(topic,usedKeys){
           const s=simplify(n,d*dv);const ans=s[0]+"/"+s[1];
           q={question:n+"/"+d+" ÷ "+dv+" =",answer:ans,leftBox:false,topic,isText:true,keyNum:d*10+n,dynamicHint:n+"/"+d+" ÷ "+dv+"\nKeep top, multiply bottom: "+n+"/"+(d*dv)+(s[0]!==n||s[1]!==d*dv?" = "+ans+" (simplified)":""),fracDivHint:{n,d,whole:dv,newD:d*dv,simpN:s[0],simpD:s[1]}};break;}
         case"decimals-add":{
-          const a=parseFloat((rnd(10,99)+rnd(0,9)/10).toFixed(1)),b=parseFloat((rnd(1,20)+rnd(0,9)/10).toFixed(1));
-          q={question:a+" + "+b+" =",answer:parseFloat((a+b).toFixed(1)),leftBox:false,topic,keyNum:Math.round(a*10),dynamicHint:"  "+a+"\n+ "+b+"\n"+"─".repeat(6)+"\n= "+parseFloat((a+b).toFixed(1)),decColHint:{top:a,bot:b,answer:parseFloat((a+b).toFixed(1)),op:"add"}};break;}
+          const use2dp=Math.random()<0.4;
+          const a=use2dp?parseFloat((rnd(10,99)+rnd(0,9)/10+rnd(1,9)/100).toFixed(2)):parseFloat((rnd(10,99)+rnd(0,9)/10).toFixed(1));
+          const b=use2dp?parseFloat((rnd(1,20)+rnd(0,9)/10+rnd(1,9)/100).toFixed(2)):parseFloat((rnd(1,20)+rnd(0,9)/10).toFixed(1));
+          const ans=parseFloat((a+b).toFixed(2));
+          q={question:a+" + "+b+" =",answer:ans,leftBox:false,topic,keyNum:Math.round(a*100),dynamicHint:"  "+a+"\n+ "+b+"\n"+"─".repeat(6)+"\n= "+ans,decColHint:{top:a,bot:b,answer:ans,op:"add"}};break;}
         case"decimals-subtract":{
-          const a=parseFloat((rnd(20,99)+rnd(1,9)/10).toFixed(1)),b=parseFloat((rnd(1,15)+rnd(0,9)/10).toFixed(1));
-          q={question:a+" - "+b+" =",answer:parseFloat((a-b).toFixed(1)),leftBox:false,topic,keyNum:Math.round(a*10),dynamicHint:"  "+a+"\n- "+b+"\n"+"─".repeat(6)+"\n= "+parseFloat((a-b).toFixed(1)),decColHint:{top:a,bot:b,answer:parseFloat((a-b).toFixed(1)),op:"sub"}};break;}
+          const use2dp=Math.random()<0.4;
+          const a=use2dp?parseFloat((rnd(20,99)+rnd(1,9)/10+rnd(1,9)/100).toFixed(2)):parseFloat((rnd(20,99)+rnd(1,9)/10).toFixed(1));
+          const b=use2dp?parseFloat((rnd(1,15)+rnd(0,9)/10+rnd(0,8)/100).toFixed(2)):parseFloat((rnd(1,15)+rnd(0,9)/10).toFixed(1));
+          const ans=parseFloat((a-b).toFixed(2));
+          q={question:a+" - "+b+" =",answer:ans,leftBox:false,topic,keyNum:Math.round(a*100),dynamicHint:"  "+a+"\n- "+b+"\n"+"─".repeat(6)+"\n= "+ans,decColHint:{top:a,bot:b,answer:ans,op:"sub"}};break;}
         case"decimals-multiply":{
-          const a=parseFloat((rnd(1,9)+rnd(1,9)/10).toFixed(1)),b=rnd(2,12);const ans=parseFloat((a*b).toFixed(2));
-          q={question:a+" × "+b+" =",answer:ans,leftBox:false,topic,keyNum:Math.round(a*10),dynamicHint:"Ignore decimal: "+(Math.round(a*10))+" × "+b+" = "+(Math.round(a*10)*b)+"\nCount 1 decimal place → "+ans};break;}
+          const use2dp=Math.random()<0.35;
+          const a=use2dp?parseFloat((rnd(1,9)+rnd(1,9)/10+rnd(1,9)/100).toFixed(2)):parseFloat((rnd(1,9)+rnd(1,9)/10).toFixed(1));
+          const b=rnd(2,12);const ans=parseFloat((a*b).toFixed(3));
+          const dpCount=use2dp?2:1;
+          const intA=Math.round(a*(use2dp?100:10));
+          q={question:a+" × "+b+" =",answer:parseFloat(ans.toFixed(dpCount)),leftBox:false,topic,keyNum:intA,dynamicHint:"Ignore decimal: "+intA+" × "+b+" = "+(intA*b)+"\nCount "+dpCount+" decimal place"+(dpCount>1?"s":"")+" → "+parseFloat(ans.toFixed(dpCount))};break;}
         case"percentage":{
-          const cfg=pick([{p:10,b:10},{p:20,b:5},{p:25,b:4},{p:50,b:2},{p:30,b:10},{p:40,b:5},{p:75,b:4},{p:5,b:20},{p:15,b:20}]);
+          const cfg=pick([{p:10,b:10},{p:20,b:5},{p:25,b:4},{p:50,b:2},{p:30,b:10},{p:40,b:5},{p:75,b:4},{p:5,b:20},{p:15,b:20},{p:35,b:20},{p:45,b:20},{p:60,b:5},{p:65,b:20},{p:70,b:10}]);
           const w=rnd(1,10)*cfg.b,ans=Math.round(w*cfg.p/100);
           let m1="Method 1:\n10% of "+w+" = "+(w/10);
           if(cfg.p===10)m1+="\n= "+ans;
@@ -261,6 +343,11 @@ function genQ(topic,usedKeys){
           else if(cfg.p===40)m1+="\n40% = 4 × 10% = "+ans;
           else if(cfg.p===75)m1+="\n75% = 50%+25% = "+ans;
           else if(cfg.p===15)m1+="\n15% = 10%+5% = "+ans;
+          else if(cfg.p===35)m1+="\n35% = 3 × 10% + 5% = "+ans;
+          else if(cfg.p===45)m1+="\n45% = 4 × 10% + 5% = "+ans;
+          else if(cfg.p===60)m1+="\n60% = 6 × 10% = "+ans;
+          else if(cfg.p===65)m1+="\n65% = 6 × 10% + 5% = "+ans;
+          else if(cfg.p===70)m1+="\n70% = 7 × 10% = "+ans;
           const m2="Method 2:\n"+cfg.p+" × "+w+" = "+(cfg.p*w)+"\n"+(cfg.p*w)+" ÷ 100 = "+ans;
           let dh=m1+"\n\n"+m2;
           q={question:cfg.p+"% of "+w+" =",answer:ans,leftBox:false,topic,keyNum:w,dynamicHint:dh};break;}
