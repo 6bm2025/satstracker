@@ -1032,29 +1032,6 @@ function FracMixedVisual({w1,n1,d1,w2,n2,d2,hideAnswer}){
   function Op({s}){return <span style={{fontSize:FS,fontWeight:900,color:"#555",fontFamily:"system-ui",margin:"0 4px",display:"inline-flex",alignItems:"center",lineHeight:1}}>{s}</span>;}
   function Num({v,col}){return <span style={{fontSize:FS,fontWeight:900,color:col,fontFamily:"system-ui",lineHeight:1,display:"inline-flex",alignItems:"center"}}>{v}</span>;}
   function Row({label,children}){return(<div style={{display:"flex",alignItems:"center",flexWrap:"nowrap",whiteSpace:"nowrap",marginBottom:8,minWidth:0}}><span style={{fontSize:12,fontWeight:700,color:"#555",fontFamily:"system-ui",marginRight:8,flexShrink:0}}>{label}</span><span style={{display:"inline-flex",alignItems:"center",gap:0,lineHeight:1}}>{children}</span></div>);}
-  const FW=44,OPW=32,PAD=38,fracH=FS*2+8,midY=PAD+fracH/2,topY=PAD+4,botY=PAD+fracH-4;
-  function arcSVG(xF1,xF2,xEF1,xEF2,fM1,fM2,totalSVGW){
-    function arc(x1,y1,x2,y2,col,label,above){
-      const cpY=above?Math.min(y1,y2)-32:Math.max(y1,y2)+32,mx=(x1+x2)/2;
-      const t=0.93,bx=(1-t)*(1-t)*x1+2*(1-t)*t*mx+t*t*x2,by=(1-t)*(1-t)*y1+2*(1-t)*t*cpY+t*t*y2;
-      const ang=Math.atan2(y2-by,x2-bx),hs=7;
-      const px1=x2-hs*Math.cos(ang-0.4),py1=y2-hs*Math.sin(ang-0.4);
-      const px2=x2-hs*Math.cos(ang+0.4),py2=y2-hs*Math.sin(ang+0.4);
-      const lx=mx,ly=above?cpY+7:cpY-7;
-      return(<g key={x1+"-"+above}>
-        <path d={"M"+x1+","+y1+" Q"+mx+","+cpY+" "+x2+","+y2} stroke={col} strokeWidth="2" fill="none"/>
-        <polygon points={x2+","+y2+" "+px1+","+py1+" "+px2+","+py2} fill={col}/>
-        <rect x={lx-13} y={ly-8} width="26" height="16" rx="3" fill={col}/>
-        <text x={lx} y={ly+4} textAnchor="middle" fontSize="10" fontWeight="900" fontFamily="system-ui" fill="#fff">{"x"+label}</text>
-      </g>);
-    }
-    return(<svg width={totalSVGW} height={PAD*2+fracH} style={{display:"block",overflow:"visible",marginBottom:4}}>
-      {arc(xF1,topY,xEF1,topY,C1,fM1,true)}
-      {arc(xF1,botY,xEF1,botY,C1,fM1,false)}
-      {arc(xF2,topY,xEF2,topY,C2,fM2,true)}
-      {arc(xF2,botY,xEF2,botY,C2,fM2,false)}
-    </svg>);
-  }
   return(
     <div style={{marginBottom:8}}>
       <Row label="Whole numbers:"><Num v={w1} col="#7c3aed"/><Op s="+"/><Num v={w2} col="#7c3aed"/><Op s="="/><Num v={wSum} col="#7c3aed"/></Row>
@@ -1064,13 +1041,54 @@ function FracMixedVisual({w1,n1,d1,w2,n2,d2,hideAnswer}){
         <div style={{marginBottom:8}}>
           <div style={{fontSize:12,fontWeight:700,color:"#555",fontFamily:"system-ui",marginBottom:4}}>Fractions:</div>
           {(function(){
-            const xF1=FW/2,xF2=FW+OPW+FW/2,xEF1=2*(FW+OPW)+FW/2,xEF2=3*(FW+OPW)+FW/2;
-            const svgW=4*FW+3*OPW+8;
-            return(<div style={{display:"inline-flex",flexDirection:"column",alignItems:"flex-start"}}>
-              {arcSVG(xF1,xF2,xEF1,xEF2,fM1,fM2,svgW)}
-              <div style={{display:"inline-flex",alignItems:"center",gap:0,lineHeight:1,marginTop:-PAD+4}}>
-                <Fr n={n1} d={d1} col={C1}/><Op s="+"/><Fr n={n2} d={d2} col={C2}/>
-                <Op s="="/>
+            const FW2=44,OPW2=32,PAD2=44,FS2=FS;
+            const fracH2=FS2*2+10;
+            const svgH2=PAD2*2+fracH2;
+            const midY2=PAD2+fracH2/2;
+            const lineY2=midY2+2;
+            const numY2=midY2-FS2*0.55;
+            const denY2=midY2+FS2*0.95;
+            const topY2=PAD2+2;
+            const botY2=PAD2+fracH2-2;
+            const xF1=FW2/2,xF2=FW2+OPW2+FW2/2,xEF1=2*(FW2+OPW2)+FW2/2,xEF2=3*(FW2+OPW2)+FW2/2;
+            const svgW=4*FW2+3*OPW2+8;
+            const opX1=FW2+OPW2/2,opEq=2*FW2+OPW2+OPW2/2,opX2=3*FW2+2*OPW2+OPW2/2;
+            function frSVG(n,d,col,cx){
+              const lw=String(Math.max(n,d)).length*12+8;
+              return(<g key={"f"+cx}>
+                <text x={cx} y={numY2} textAnchor="middle" fontSize={FS2} fontWeight="900" fontFamily="system-ui" fill={col}>{n}</text>
+                <line x1={cx-lw/2} y1={lineY2} x2={cx+lw/2} y2={lineY2} stroke={col} strokeWidth="2.5" strokeLinecap="round"/>
+                <text x={cx} y={denY2} textAnchor="middle" fontSize={FS2} fontWeight="900" fontFamily="system-ui" fill={col}>{d}</text>
+              </g>);
+            }
+            function opSVG(sym,cx){
+              return <text key={"op"+cx} x={cx} y={midY2+FS2*0.35} textAnchor="middle" fontSize={FS2+4} fontWeight="900" fontFamily="system-ui" fill="#555">{sym}</text>;
+            }
+            function arc2(x1,y1,x2,y2,col,mult,above){
+              const cpY=above?Math.min(y1,y2)-30:Math.max(y1,y2)+30;
+              const mx=(x1+x2)/2;
+              const t=0.93,bx=(1-t)*(1-t)*x1+2*(1-t)*t*mx+t*t*x2,by=(1-t)*(1-t)*y1+2*(1-t)*t*cpY+t*t*y2;
+              const ang=Math.atan2(y2-by,x2-bx),hs=7;
+              const px1=x2-hs*Math.cos(ang-0.4),py1=y2-hs*Math.sin(ang-0.4);
+              const px2=x2-hs*Math.cos(ang+0.4),py2=y2-hs*Math.sin(ang+0.4);
+              const lx=mx,ly=above?cpY+7:cpY-7;
+              return(<g key={x1+"-"+x2+"-"+above}>
+                <path d={"M"+x1+","+y1+" Q"+mx+","+cpY+" "+x2+","+y2} stroke={col} strokeWidth="2" fill="none"/>
+                <polygon points={x2+","+y2+" "+px1+","+py1+" "+px2+","+py2} fill={col}/>
+                <rect x={lx-13} y={ly-8} width="26" height="16" rx="3" fill={col}/>
+                <text x={lx} y={ly+4} textAnchor="middle" fontSize="10" fontWeight="900" fontFamily="system-ui" fill="#fff">{"x"+mult}</text>
+              </g>);
+            }
+            return(<div>
+              <svg width={svgW} height={svgH2} style={{display:"block",overflow:"visible"}}>
+                {frSVG(n1,d1,C1,xF1)}{opSVG("+",opX1)}{frSVG(n2,d2,C2,xF2)}
+                {opSVG("=",opEq)}{frSVG(en1,cd,C1,xEF1)}{opSVG("+",opX2)}{frSVG(en2,cd,C2,xEF2)}
+                {arc2(xF1,topY2,xEF1,topY2,C1,fM1,true)}
+                {arc2(xF1,botY2,xEF1,botY2,C1,fM1,false)}
+                {arc2(xF2,topY2,xEF2,topY2,C2,fM2,true)}
+                {arc2(xF2,botY2,xEF2,botY2,C2,fM2,false)}
+              </svg>
+              <div style={{display:"inline-flex",alignItems:"center",gap:0,lineHeight:1,flexWrap:"wrap",marginTop:4}}>
                 <Fr n={en1} d={cd} col={C1}/><Op s="+"/><Fr n={en2} d={cd} col={C2}/>
                 <Op s="="/><Fr n={fSumN} d={cd} col="#555"/>
                 {wholeFromFrac>0&&<><Op s="="/><Num v={wholeFromFrac} col="#555"/><span style={{fontSize:12,color:"#555",fontFamily:"system-ui",margin:"0 3px"}}>whole +</span><Fr n={remN} d={cd} col="#555"/></>}
