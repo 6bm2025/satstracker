@@ -1775,8 +1775,7 @@ function TeacherDashboard({teacher,pupils,onUpdatePupils,onLogout,assignments,on
       const streak=getStreakCount(p.practiseDates,streakSettings);
       rows.push([p.name,p.sessions||0,lastLoginLabel(p.lastLogin),(st.overall!==null?st.overall:0)+"%",last3str,weakStr,streak!==null?streak:"N/A"]);
     });
-    const csv=rows.map(function(r){return r.map(function(c){return'"'+String(c).replace(/"/g,'""')+'"';}).join(",");}).join("
-");
+    const csv=rows.map(function(r){return r.map(function(c){return'"'+String(c).replace(/"/g,'""')+'"';}).join(",");}).join("\n");
     const a=document.createElement("a");a.href="data:text/csv;charset=utf-8,"+encodeURIComponent(csv);a.download="sats-class.csv";a.click();
   };
 
