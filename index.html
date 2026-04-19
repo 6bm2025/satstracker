@@ -585,17 +585,17 @@ function ColHintSub({top,bot,answer,hideAnswer}){
           return(
             <div key={ci} style={{width:CW,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",height:46,position:"relative"}}>
               {gave?(
-                <div style={{display:"inline-flex",alignItems:"flex-end",gap:1}}>
-                  <span style={{fontSize:13,fontWeight:900,color:"#e67e22",lineHeight:1,paddingBottom:4}}>{worked}</span>
-                  <span style={{fontSize:28,fontWeight:900,color:c,opacity:0.4,textDecoration:"line-through",textDecorationColor:"#888"}}>{orig}</span>
+                <div style={{display:"inline-flex",alignItems:"center",gap:1,fontFamily:"system-ui,sans-serif"}}>
+                  <span style={{fontSize:12,fontWeight:900,color:"#e67e22",lineHeight:1,marginBottom:14,fontFamily:"system-ui,sans-serif"}}>{worked}</span>
+                  <span style={{fontSize:28,fontWeight:900,color:c,opacity:0.4,textDecoration:"line-through",textDecorationColor:"#888",fontFamily:"system-ui,sans-serif"}}>{orig}</span>
                 </div>
               ):got?(
-                <div style={{position:"relative"}}>
-                  <span style={{fontSize:28,fontWeight:900,color:c}}>{orig}</span>
-                  <span style={{position:"absolute",top:2,left:-11,fontSize:13,fontWeight:900,color:"#e67e22"}}>1</span>
+                <div style={{position:"relative",fontFamily:"system-ui,sans-serif"}}>
+                  <span style={{fontSize:28,fontWeight:900,color:c,fontFamily:"system-ui,sans-serif"}}>{orig}</span>
+                  <span style={{position:"absolute",top:2,left:-11,fontSize:13,fontWeight:900,color:"#e67e22",fontFamily:"system-ui,sans-serif"}}>1</span>
                 </div>
               ):(
-                <span style={{fontSize:28,fontWeight:900,color:invisible?"transparent":c}}>{invisible?"":orig}</span>
+                <span style={{fontSize:28,fontWeight:900,color:invisible?"transparent":c,fontFamily:"system-ui,sans-serif"}}>{invisible?"":orig}</span>
               )}
             </div>
           );
@@ -1833,7 +1833,7 @@ function PracticeSession({mode,questions,onComplete,onExit}){
               const currentAns=saved?saved.userAnswer:"";
               const isTM=pq.isTwoMark||TWO_MARK.has(pq.topic);
               const marks=isTM?2:1;
-              const workH=isTM?200:140;
+              const workH=170;
               return(
                 <div key={globalIdx} style={{border:"2px solid #111",background:"#fff",display:"flex"}}>
                   <div style={{width:40,flexShrink:0,borderRight:"2px solid #111",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-start",paddingTop:8,background:"#fff"}}>
@@ -2006,7 +2006,7 @@ function PupilDashboard({user,onUpdate,onLogout,assignments,streakSettings}){
         )}
         <Card style={{marginBottom:16}}>
           <h3 style={{margin:"0 0 14px",fontSize:17}}>Start Practising</h3>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(190px,1fr))",gap:12}}>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12}}>
             {[{m:"quick",icon:"⚡",label:"Quick Practice",sub:"10 questions, no timer",color:C.primaryL,tc:C.primary},{m:"timed",icon:"⏱",label:"Timed Practice",sub:"10 questions, 12 mins",color:C.primaryL,tc:C.primary},{m:"exam-paper",icon:"⏱",label:"Full Paper (Exam)",sub:"36 questions, 30 min timer",color:C.primary,tc:"#fff"},{m:"practice-paper",icon:"📄",label:"Full Paper (Practice)",sub:"36 questions, no timer",color:"#16a34a",tc:"#fff"}].map(function(item){return(<button key={item.m} onClick={function(){startPractice(item.m);}} style={{background:item.color,color:item.tc,border:"none",borderRadius:12,padding:16,textAlign:"left",cursor:"pointer",fontFamily:"system-ui"}}><div style={{fontSize:30,marginBottom:4}}>{item.icon}</div><div style={{fontWeight:800,fontSize:15}}>{item.label}</div><div style={{fontSize:12,opacity:0.8,marginTop:2}}>{item.sub}</div></button>);})  }
           </div>
         </Card>
