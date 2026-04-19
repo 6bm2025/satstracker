@@ -1561,26 +1561,33 @@ function WorkingArea({height,children}){
 }
 function QuestionCard({q,qNum,inputRef,ansValue,onAnsChange,onSubmit,submitted,isCorrect,children}){
   const isTwoMark=q.isTwoMark||TWO_MARK.has(q.topic);const marks=isTwoMark?2:1;
-  const qDisplay=<span style={{fontSize:20,fontWeight:700,fontFamily:"monospace"}}>{renderMath(q.question,"0.85em")}</span>;
+  const markColW=62;const numColW=44;const ansW=120;const ansH=38;const ansBottom=20;
+  const inlineInput=<input ref={inputRef} value={ansValue} onChange={onAnsChange} onKeyDown={function(e){if(e.key==="Enter")onSubmit();}} readOnly={submitted} style={{width:70,height:30,border:"2px solid #111",borderRadius:0,textAlign:"center",fontSize:18,fontWeight:700,fontFamily:"monospace",outline:"none",background:submitted?(isCorrect?"#dcfce7":"#fee2e2"):"#fff",flexShrink:0}}/>;
+  const qDisplay=<span style={{fontSize:20,fontWeight:700,fontFamily:"monospace",whiteSpace:"nowrap"}}>{renderMath(q.question,"0.85em")}</span>;
+  const workH=isTwoMark?220:160;
   return(
-    <div style={{border:"2px solid "+C.text,borderRadius:4,overflow:"hidden",background:C.white}}>
-      <div style={{display:"flex",minHeight:56}}>
-        <div style={{width:52,flexShrink:0,borderRight:"2px solid "+C.text,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-start",paddingTop:10}}>
-          <span style={{fontWeight:900,fontSize:18,color:C.satsBlue,fontFamily:"system-ui"}}>{qNum}</span>
-          {isTwoMark&&<span style={{fontSize:9,color:C.textL,fontWeight:700,marginTop:4,textAlign:"center",lineHeight:1.2}}>Show{"\n"}method</span>}
-        </div>
-        <div style={{flex:1,padding:"10px 14px",display:"flex",alignItems:"center"}}>
-          {q.leftBox?<div style={{display:"flex",alignItems:"center",gap:10}}><input ref={inputRef} value={ansValue} onChange={onAnsChange} onKeyDown={function(e){if(e.key==="Enter")onSubmit();}} readOnly={submitted} style={{width:90,height:40,border:"2.5px solid "+C.satsBlue,borderRadius:3,textAlign:"center",fontSize:20,fontWeight:700,fontFamily:"monospace",outline:"none",background:submitted?(isCorrect?"#dcfce7":"#fee2e2"):"#fff"}}/><span style={{fontSize:20,fontWeight:700,fontFamily:"monospace"}}>{renderMath(q.question.replace("= ",""),"0.85em")}</span></div>:qDisplay}
-        </div>
-        <div style={{width:52,flexShrink:0,borderLeft:"2px solid "+C.text,background:C.satsMark,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-end",paddingBottom:8}}>
-          <div style={{width:34,height:34,border:"2px solid "+C.text,background:"#fff",borderRadius:2,marginBottom:4}}/>
-          <span style={{fontSize:10,fontWeight:700,textAlign:"center"}}>{marks} mark{marks>1?"s":""}</span>
-        </div>
+    <div style={{border:"2px solid #111",borderRadius:0,overflow:"hidden",background:C.white,display:"flex"}}>
+      <div style={{width:numColW,flexShrink:0,borderRight:"2px solid #111",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-start",paddingTop:10,background:"#fff"}}>
+        <span style={{fontWeight:400,fontSize:17,color:"#111",fontFamily:"system-ui"}}>{qNum}</span>
+        {isTwoMark&&<span style={{fontSize:7,color:"#555",marginTop:8,writingMode:"vertical-rl",transform:"rotate(180deg)"}}>Show method</span>}
       </div>
-      <WorkingArea height={isTwoMark?220:160}>
-        {!q.leftBox&&(<div style={{position:"absolute",bottom:10,right:62,zIndex:2}}><input ref={inputRef} value={ansValue} onChange={onAnsChange} onKeyDown={function(e){if(e.key==="Enter")onSubmit();}} readOnly={submitted} style={{width:120,height:44,border:"2.5px solid "+C.satsBlue,borderRadius:3,textAlign:"center",fontSize:20,fontWeight:700,fontFamily:"monospace",outline:"none",background:submitted?(isCorrect?"#dcfce7":"#fee2e2"):"#fff",display:"block"}}/></div>)}
-      </WorkingArea>
-      {children}
+      <div style={{flex:1,display:"flex",flexDirection:"column",minWidth:0}}>
+        <div style={{padding:"10px 14px",borderBottom:"1px solid #ccc",display:"flex",alignItems:"center",gap:8,flexWrap:q.leftBox?"nowrap":"wrap",whiteSpace:q.leftBox?"nowrap":"normal",overflow:q.leftBox?"hidden":"visible"}}>
+          {q.leftBox
+            ?<>{inlineInput}<span style={{fontSize:18,fontWeight:700,fontFamily:"monospace"}}>{renderMath(q.question.replace("= ",""),"0.85em")}</span></>
+            :qDisplay}
+        </div>
+        <WorkingArea height={workH}>
+          {!q.leftBox&&(<div style={{position:"absolute",bottom:ansBottom,right:8,zIndex:2}}>
+            <input ref={inputRef} value={ansValue} onChange={onAnsChange} onKeyDown={function(e){if(e.key==="Enter")onSubmit();}} readOnly={submitted} style={{width:ansW,height:ansH,border:"2px solid #111",borderRadius:0,textAlign:"center",fontSize:20,fontWeight:700,fontFamily:"monospace",outline:"none",background:submitted?(isCorrect?"#dcfce7":"#fee2e2"):"#fff",display:"block"}}/>
+          </div>)}
+        </WorkingArea>
+        {children}
+      </div>
+      <div style={{width:markColW,flexShrink:0,borderLeft:"2px solid #111",background:C.satsMark,position:"relative"}}>
+        <div style={{position:"absolute",bottom:ansBottom,left:"50%",transform:"translateX(-50%)",width:34,height:ansH,border:"1.5px solid #111",background:"#fff"}}/>
+        <span style={{position:"absolute",bottom:6,left:0,right:0,textAlign:"center",fontSize:9.5,fontWeight:400,color:"#111",whiteSpace:"nowrap"}}>{marks} mark{marks>1?"s":""}</span>
+      </div>
     </div>
   );
 }
@@ -1674,46 +1681,216 @@ function PastPaperSummary({paper,onBack}){
 
 // ── Practice session ──────────────────────────────────────────────────────────
 function PracticeSession({mode,questions,onComplete,onExit}){
-  const[qIdx,setQIdx]=useState(0);const[ans,setAns]=useState("");const[submitted,setSubmitted]=useState(false);const[results,setResults]=useState([]);
-  const[timeLeft,setTimeLeft]=useState(mode==="timed"?720:mode==="full-paper"?1800:(mode==="custom-timed"?null:null));
-  const[showSelfAssess,setShowSelfAssess]=useState(false);const[selfAssessData,setSelfAssessData]=useState(null);const[exitConfirm,setExitConfirm]=useState(false);const[done,setDone]=useState(false);const[finalResults,setFinalResults]=useState(null);
-  const inputRef=useRef(null);const q=questions[qIdx];const total=questions.length;
-  const noMidReview=mode==="full-paper"||mode==="timed"||mode==="custom-timed";
-  const startTimeRef=useRef(Date.now());const totalSecsRef=useRef(mode==="timed"?720:mode==="full-paper"?1800:null);
+  const isFullPaper=mode==="exam-paper"||mode==="practice-paper"||mode==="full-paper";
+  const hasTimer=mode==="exam-paper"||mode==="timed"||mode==="custom-timed";
+  const noMidReview=isFullPaper||mode==="timed"||mode==="custom-timed";
+  const PER_PAGE=6;
+  const[page,setPage]=useState(0);
+  const[answers,setAnswers]=useState({});
+  const[submitted,setSubmitted]=useState(false);
+  const[results,setResults]=useState([]);
+  const[qIdx,setQIdx]=useState(0);
+  const[ans,setAns]=useState("");
+  const[qSubmitted,setQSubmitted]=useState(false);
+  const[timeLeft,setTimeLeft]=useState(hasTimer?(mode==="timed"?720:1800):null);
+  const[paused,setPaused]=useState(false);
+  const[showSelfAssess,setShowSelfAssess]=useState(false);
+  const[selfAssessData,setSelfAssessData]=useState(null);
+  const[exitConfirm,setExitConfirm]=useState(false);
+  const[done,setDone]=useState(false);
+  const[finalResults,setFinalResults]=useState(null);
+  const inputRef=useRef(null);
+  const total=questions.length;
+  const totalPages=Math.ceil(total/PER_PAGE);
+  const pausedRef=useRef(false);
+  const startTimeRef=useRef(Date.now());
+  const totalSecsRef=useRef(hasTimer?(mode==="timed"?720:1800):null);
+  const elapsedRef=useRef(0);
+
   useEffect(function(){
-    if(totalSecsRef.current===null)return;
+    if(!hasTimer)return;
     startTimeRef.current=Date.now();
     const t=setInterval(function(){
-      const elapsed=Math.floor((Date.now()-startTimeRef.current)/1000);
+      if(pausedRef.current)return;
+      const elapsed=elapsedRef.current+Math.floor((Date.now()-startTimeRef.current)/1000);
       const rem=totalSecsRef.current-elapsed;
-      if(rem<=0){clearInterval(t);setTimeLeft(0);const all=results.concat(questions.slice(results.length).map(function(qq){return Object.assign({},qq,{userAnswer:"",correct:false,marks:0});}));const cappedAll=all.map(function(r){return Object.assign({},r,{marks:Math.min(r.marks||0,TWO_MARK.has(r.topic)?2:1)});});setFinalResults(cappedAll);setDone(true);}
-      else setTimeLeft(rem);
+      if(rem<=0){
+        clearInterval(t);setTimeLeft(0);
+        if(isFullPaper){
+          const allRes=questions.map(function(qq,i){return answers[i]?Object.assign({},qq,answers[i]):Object.assign({},qq,{userAnswer:"",correct:false,marks:0});});
+          const capped=allRes.map(function(r){return Object.assign({},r,{marks:Math.min(r.marks||0,TWO_MARK.has(r.topic)?2:1)});});
+          setFinalResults(capped);setDone(true);
+        } else {
+          const all=results.concat(questions.slice(results.length).map(function(qq){return Object.assign({},qq,{userAnswer:"",correct:false,marks:0});}));
+          const capped=all.map(function(r){return Object.assign({},r,{marks:Math.min(r.marks||0,TWO_MARK.has(r.topic)?2:1)});});
+          setFinalResults(capped);setDone(true);
+        }
+      } else setTimeLeft(rem);
     },250);
     return function(){clearInterval(t);};
   },[]);
-  useEffect(function(){if(!submitted&&!showSelfAssess&&inputRef.current)inputRef.current.focus();},[qIdx,submitted,showSelfAssess]);
+
+  const togglePause=function(){
+    if(!paused){
+      elapsedRef.current=elapsedRef.current+Math.floor((Date.now()-startTimeRef.current)/1000);
+      pausedRef.current=true;setPaused(true);
+    } else {
+      startTimeRef.current=Date.now();
+      pausedRef.current=false;setPaused(false);
+    }
+  };
+
+  useEffect(function(){if(!qSubmitted&&!showSelfAssess&&inputRef.current&&!isFullPaper)inputRef.current.focus();},[qIdx,qSubmitted,showSelfAssess]);
   const fmtTime=function(s){return Math.floor(s/60)+":"+String(s%60).padStart(2,"0");};
   const completeSession=useCallback(function(res){setFinalResults(res);setDone(true);},[]);
+  useEffect(function(){if(done&&finalResults)onComplete(finalResults);},[done,finalResults]);
+
+  const submitFullPaper=function(){
+    const allRes=questions.map(function(qq,i){return answers[i]?Object.assign({},qq,answers[i]):Object.assign({},qq,{userAnswer:"",correct:false,marks:0});});
+    const capped=allRes.map(function(r){return Object.assign({},r,{marks:Math.min(r.marks||0,TWO_MARK.has(r.topic)?2:1)});});
+    setFinalResults(capped);setDone(true);
+  };
+
+  const recordAnswer=function(idx,ua){
+    const q=questions[idx];
+    const ok=answersMatch(ua.trim().replace(/,/g,""),q.answer,q.isText);
+    const isTM=TWO_MARK.has(q.topic);const marks=ok?(isTM?2:1):0;
+    setAnswers(function(prev){return Object.assign({},prev,{[idx]:{userAnswer:ua,correct:ok,marks:marks}});});
+  };
+
   const submitAns=function(){
-    if(submitted||showSelfAssess)return;if(ans.trim()==="")return;
+    if(qSubmitted||showSelfAssess)return;if(ans.trim()==="")return;
+    const q=questions[qIdx];
     const ua=ans.trim().replace(/,/g,"");const ok=answersMatch(ua,q.answer,q.isText);
     const isTM=TWO_MARK.has(q.topic);const marks=ok?(isTM?2:1):0;
     const rec=Object.assign({},q,{userAnswer:ua,correct:ok,marks:marks});const nr=results.concat([rec]);
     if(noMidReview&&isTM&&!ok){setResults(nr);setSelfAssessData(rec);setShowSelfAssess(true);}
-    else{setResults(nr);if(!noMidReview)setSubmitted(true);else advanceWith(nr);}
+    else{setResults(nr);if(!noMidReview)setQSubmitted(true);else advanceWith(nr);}
   };
   const handleSelfAssess=function(gotMethod){
     const upd=Object.assign({},selfAssessData,{marks:gotMethod?1:0});
     const nr=results.map(function(r,i){return i===results.length-1?upd:r;});
     setResults(nr);setSelfAssessData(null);setShowSelfAssess(false);advanceWith(nr);
   };
-  const advanceWith=function(cr){if(cr.length>=total)completeSession(cr);else{setQIdx(cr.length);setAns("");setSubmitted(false);}};
-  const advanceAfterFeedback=function(){if(qIdx+1>=total)completeSession(results);else{setQIdx(qIdx+1);setAns("");setSubmitted(false);}};
-  useEffect(function(){if(done&&finalResults)onComplete(finalResults);},[done,finalResults]);
+  const advanceWith=function(cr){if(cr.length>=total)completeSession(cr);else{setQIdx(cr.length);setAns("");setQSubmitted(false);}};
+  const advanceAfterFeedback=function(){if(qIdx+1>=total)completeSession(results);else{setQIdx(qIdx+1);setAns("");setQSubmitted(false);}};
+
   if(done)return null;
-  const isCorrect=submitted&&results[results.length-1]&&results[results.length-1].correct;
+
+  const q=questions[qIdx];
+  const isCorrect=qSubmitted&&results[results.length-1]&&results[results.length-1].correct;
   const exp=getExp(q.topic);
-  if(showSelfAssess&&selfAssessData){return(<div style={{minHeight:"100vh",background:C.grayL,display:"flex",alignItems:"center",justifyContent:"center",padding:20,fontFamily:"system-ui"}}><Card style={{maxWidth:560,width:"100%"}}><div style={{background:"#fef3c7",borderRadius:8,padding:10,marginBottom:12,fontWeight:700,color:C.yellow}}>2-Mark Question — Method Check</div><p style={{marginBottom:8}}>Your answer was not correct, but you may earn 1 mark for using the right method.</p>{selfAssessData.colHint?<CombinedHintBox exp={exp} colHint={selfAssessData.colHint} hideAnswer={true}/>:selfAssessData.divHint?<DivisionExplanation dividend={selfAssessData.divHint.dividend} divisor={selfAssessData.divHint.divisor} hideAnswer={true}/>:<div style={{background:C.grayL,borderRadius:8,padding:12,fontFamily:"monospace",fontSize:13,whiteSpace:"pre-wrap",marginBottom:12}}>{selfAssessData.dynamicHint||selfAssessData.working||exp.example}</div>}<p style={{fontWeight:700,marginBottom:12}}>Did you use the correct method with only ONE arithmetic error?</p><div style={{display:"flex",gap:10}}><Btn onClick={function(){handleSelfAssess(true);}} color={C.green} style={{flex:1}}>Yes — 1 mark</Btn><Btn onClick={function(){handleSelfAssess(false);}} color={C.red} style={{flex:1}}>No — 0 marks</Btn></div></Card></div>);}
+
+  if(showSelfAssess&&selfAssessData){
+    return(<div style={{minHeight:"100vh",background:C.grayL,display:"flex",alignItems:"center",justifyContent:"center",padding:20,fontFamily:"system-ui"}}><Card style={{maxWidth:560,width:"100%"}}><div style={{background:"#fef3c7",borderRadius:8,padding:10,marginBottom:12,fontWeight:700,color:C.yellow}}>2-Mark Question — Method Check</div><p style={{marginBottom:8}}>Your answer was not correct, but you may earn 1 mark for using the right method.</p>{selfAssessData.colHint?<CombinedHintBox exp={exp} colHint={selfAssessData.colHint} hideAnswer={true}/>:selfAssessData.divHint?<DivisionExplanation dividend={selfAssessData.divHint.dividend} divisor={selfAssessData.divHint.divisor} hideAnswer={true}/>:<div style={{background:C.grayL,borderRadius:8,padding:12,fontFamily:"monospace",fontSize:13,whiteSpace:"pre-wrap",marginBottom:12}}>{selfAssessData.dynamicHint||selfAssessData.working||exp.example}</div>}<p style={{fontWeight:700,marginBottom:12}}>Did you use the correct method with only ONE arithmetic error?</p><div style={{display:"flex",gap:10}}><Btn onClick={function(){handleSelfAssess(true);}} color={C.green} style={{flex:1}}>Yes — 1 mark</Btn><Btn onClick={function(){handleSelfAssess(false);}} color={C.red} style={{flex:1}}>No — 0 marks</Btn></div></Card></div>);
+  }
+
+  // ── FULL PAPER MODE (page-based, 6 per page) ────────────────────────────────
+  if(isFullPaper){
+    const pageStart=page*PER_PAGE;
+    const pageQs=questions.slice(pageStart,pageStart+PER_PAGE);
+    return(
+      <div style={{minHeight:"100vh",background:"#f0f0f0",fontFamily:"system-ui"}}>
+        <div style={{background:"#fff",borderBottom:"2px solid #111",padding:"10px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:10}}>
+          <button onClick={function(){setExitConfirm(true);}} style={{background:"none",border:"1px solid #ccc",borderRadius:6,cursor:"pointer",fontSize:13,color:C.textL,padding:"4px 10px"}}>Exit</button>
+          <div style={{display:"flex",alignItems:"center",gap:12}}>
+            <span style={{fontSize:13,color:C.textL}}>Page {page+1} of {totalPages}</span>
+            {hasTimer&&timeLeft!==null&&(
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                <span style={{fontWeight:700,fontSize:16,color:timeLeft<60?C.red:C.text,fontFamily:"monospace",minWidth:48}}>{fmtTime(timeLeft)}</span>
+                <button onClick={togglePause} style={{background:paused?C.green:C.yellow,color:"#fff",border:"none",borderRadius:6,padding:"4px 12px",cursor:"pointer",fontWeight:700,fontSize:13}}>{paused?"Resume":"Pause"}</button>
+              </div>
+            )}
+            <span style={{fontSize:12,fontWeight:700,background:mode==="exam-paper"?C.primary:"#16a34a",color:"#fff",padding:"3px 10px",borderRadius:99}}>{mode==="exam-paper"?"Exam Conditions":"Practice Paper"}</span>
+          </div>
+          <div style={{display:"flex",gap:8}}>
+            {page>0&&<Btn onClick={function(){setPage(function(p){return p-1;});}} color={C.grayL} textColor={C.text} style={{padding:"6px 14px",fontSize:13}}>← Previous</Btn>}
+            {page<totalPages-1
+              ?<Btn onClick={function(){setPage(function(p){return p+1;});}} style={{padding:"6px 14px",fontSize:13}}>Next →</Btn>
+              :<Btn onClick={function(){if(window.confirm("Submit your paper? Make sure you have answered all questions."))submitFullPaper();}} color={C.green} style={{padding:"6px 14px",fontSize:13}}>Submit Paper</Btn>
+            }
+          </div>
+        </div>
+
+        {paused&&(
+          <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",zIndex:50,display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <div style={{background:"#fff",borderRadius:16,padding:"40px 48px",textAlign:"center",maxWidth:360}}>
+              <div style={{fontSize:48,marginBottom:12}}>⏸</div>
+              <h2 style={{marginBottom:8}}>Paper Paused</h2>
+              <p style={{color:C.textL,fontSize:14,marginBottom:24}}>The timer has stopped. Questions are hidden until you resume.</p>
+              <Btn onClick={togglePause} color={C.green} style={{width:"100%",padding:14,fontSize:16}}>Resume Paper</Btn>
+            </div>
+          </div>
+        )}
+
+        {exitConfirm&&(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:100,display:"flex",alignItems:"center",justifyContent:"center"}}><Card style={{maxWidth:340,width:"90%",textAlign:"center"}}><h3 style={{marginBottom:8}}>Exit Paper?</h3><p style={{color:C.textL,fontSize:14,marginBottom:16}}>Your progress won't be saved.</p><div style={{display:"flex",gap:10}}><Btn onClick={onExit} color={C.red} style={{flex:1}}>Exit</Btn><Btn onClick={function(){setExitConfirm(false);}} color={C.grayL} textColor={C.text} style={{flex:1}}>Continue</Btn></div></Card></div>)}
+
+        <div style={{maxWidth:900,margin:"0 auto",padding:"20px 16px"}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+            {pageQs.map(function(pq,pi){
+              const globalIdx=pageStart+pi;
+              const saved=answers[globalIdx];
+              const currentAns=saved?saved.userAnswer:"";
+              const isTM=pq.isTwoMark||TWO_MARK.has(pq.topic);
+              const marks=isTM?2:1;
+              const workH=isTM?200:140;
+              return(
+                <div key={globalIdx} style={{border:"2px solid #111",background:"#fff",display:"flex"}}>
+                  <div style={{width:40,flexShrink:0,borderRight:"2px solid #111",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-start",paddingTop:8,background:"#fff"}}>
+                    <span style={{fontWeight:400,fontSize:16,color:"#111"}}>{globalIdx+1}</span>
+                    {isTM&&<span style={{fontSize:6.5,color:"#555",marginTop:6,writingMode:"vertical-rl",transform:"rotate(180deg)"}}>Show method</span>}
+                  </div>
+                  <div style={{flex:1,display:"flex",flexDirection:"column",minWidth:0}}>
+                    <div style={{padding:"8px 10px",borderBottom:"1px solid #ccc",overflow:"hidden",whiteSpace:pq.leftBox?"nowrap":"normal"}}>
+                      {pq.leftBox
+                        ?<div style={{display:"flex",alignItems:"center",gap:6,whiteSpace:"nowrap"}}>
+                          <input
+                            value={currentAns}
+                            onChange={function(e){recordAnswer(globalIdx,e.target.value);}}
+                            style={{width:60,height:26,border:"2px solid #111",borderRadius:0,textAlign:"center",fontSize:15,fontWeight:700,fontFamily:"monospace",outline:"none",flexShrink:0}}
+                          />
+                          <span style={{fontSize:16,fontWeight:700,fontFamily:"monospace"}}>{renderMath(pq.question.replace("= ",""),"0.8em")}</span>
+                        </div>
+                        :<span style={{fontSize:16,fontWeight:700,fontFamily:"monospace"}}>{renderMath(pq.question,"0.8em")}</span>
+                      }
+                    </div>
+                    <div style={{position:"relative",height:workH,overflow:"hidden"}}>
+                      <svg style={{position:"absolute",inset:0,width:"100%",height:"100%",pointerEvents:"none"}} preserveAspectRatio="none">
+                        <defs><pattern id={"sq"+globalIdx} x="0" y="0" width="14" height="14" patternUnits="userSpaceOnUse"><path d="M 14 0 L 0 0 0 14" fill="none" stroke="#e8a0a0" strokeWidth="0.7"/></pattern></defs>
+                        <rect width="100%" height="100%" fill="#fff"/>
+                        <rect width="100%" height="100%" fill={"url(#sq"+globalIdx+")"}/>
+                      </svg>
+                      {!pq.leftBox&&(
+                        <input
+                          value={currentAns}
+                          onChange={function(e){recordAnswer(globalIdx,e.target.value);}}
+                          style={{position:"absolute",bottom:16,right:6,width:90,height:34,border:"2px solid #111",borderRadius:0,textAlign:"center",fontSize:16,fontWeight:700,fontFamily:"monospace",outline:"none",background:"#fff",zIndex:1}}
+                        />
+                      )}
+                    </div>
+                  </div>
+                  <div style={{width:54,flexShrink:0,borderLeft:"2px solid #111",background:C.satsMark,position:"relative"}}>
+                    <div style={{position:"absolute",bottom:16,left:"50%",transform:"translateX(-50%)",width:30,height:34,border:"1.5px solid #111",background:"#fff"}}/>
+                    <span style={{position:"absolute",bottom:4,left:0,right:0,textAlign:"center",fontSize:9,fontWeight:400,color:"#111",whiteSpace:"nowrap"}}>{marks} mark{marks>1?"s":""}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:16,padding:"12px 0",borderTop:"1px solid #ccc"}}>
+            <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+              {Array.from({length:totalPages}).map(function(_,pi){return(
+                <button key={pi} onClick={function(){setPage(pi);}} style={{width:32,height:32,border:"2px solid "+(pi===page?"#111":"#ccc"),borderRadius:4,background:pi===page?"#111":"#fff",color:pi===page?"#fff":"#111",fontWeight:700,fontSize:13,cursor:"pointer"}}>{pi+1}</button>
+              );})}
+            </div>
+            <div style={{fontSize:13,color:C.textL}}>{Object.keys(answers).length} of {total} answered</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── PRACTICE / TIMED MODE (single question, larger card) ─────────────────────
   return(
     <div style={{minHeight:"100vh",background:C.grayL,fontFamily:"system-ui"}}>
       <div style={{background:"#fff",borderBottom:"1px solid #e5e7eb",padding:"12px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:10}}>
@@ -1722,15 +1899,15 @@ function PracticeSession({mode,questions,onComplete,onExit}){
           <div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:C.textL,marginBottom:4}}><span>Q{qIdx+1} of {total}</span>{timeLeft!==null&&<span style={{fontWeight:700,color:timeLeft<60?C.red:C.text}}>{fmtTime(timeLeft)}</span>}</div>
           <PBar pct={(qIdx/total)*100} color={C.primary}/>
         </div>
-        <div style={{fontSize:12,fontWeight:700,color:C.primary,background:C.primaryL,padding:"4px 10px",borderRadius:99}}>{mode==="full-paper"?"Full Paper":mode==="timed"?"Timed":"Practice"}</div>
+        <div style={{fontSize:12,fontWeight:700,color:C.primary,background:C.primaryL,padding:"4px 10px",borderRadius:99}}>{mode==="timed"?"Timed":"Practice"}</div>
       </div>
       {exitConfirm&&(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:100,display:"flex",alignItems:"center",justifyContent:"center"}}><Card style={{maxWidth:340,width:"90%",textAlign:"center"}}><h3 style={{marginBottom:8}}>Exit Practice?</h3><p style={{color:C.textL,fontSize:14,marginBottom:16}}>Your progress won't be saved.</p><div style={{display:"flex",gap:10}}><Btn onClick={onExit} color={C.red} style={{flex:1}}>Exit</Btn><Btn onClick={function(){setExitConfirm(false);}} color={C.grayL} textColor={C.text} style={{flex:1}}>Continue</Btn></div></Card></div>)}
-      <div style={{maxWidth:640,margin:"0 auto",padding:20}}>
+      <div style={{maxWidth:760,margin:"0 auto",padding:20}}>
         <div style={{fontSize:13,color:C.primary,fontWeight:700,marginBottom:8}}>{TOPIC_NAMES[q.topic]||q.topic}</div>
-        <QuestionCard q={q} qNum={qIdx+1} inputRef={inputRef} ansValue={ans} onAnsChange={function(e){setAns(e.target.value);}} onSubmit={submitAns} submitted={submitted} isCorrect={isCorrect}>
-          {submitted&&!noMidReview&&(<div style={{padding:16,borderTop:"1px solid #e5e7eb"}}><div style={{background:isCorrect?C.greenL:C.redL,borderRadius:10,padding:14,textAlign:"center",marginBottom:isCorrect?0:12}}><div style={{fontSize:30}}>{isCorrect?"✅":"❌"}</div><div style={{fontWeight:800,color:isCorrect?C.green:C.red,fontSize:20}}>{isCorrect?"Correct! Well done!":"Not quite"}</div>{!isCorrect&&<div style={{fontSize:14,marginTop:4}}>The answer was <strong>{renderMath(String(q.answer))}</strong></div>}</div>{!isCorrect&&(<div style={{marginTop:12}}>{q.colHint?<CombinedHintBox exp={exp} colHint={q.colHint}/>:q.pvHint?<ColHintPlaceValue {...q.pvHint}/>:q.decHint?<ColHintDecSub {...q.decHint}/>:q.pvGridHint?<PlaceValueGrid {...q.pvGridHint} showArrows={true}/>:q.sdHint?<ColHintShortDiv {...q.sdHint} hideAnswer={false}/>:q.fracAddHint?<FracAddVisual {...q.fracAddHint}/>:q.fracMixedHint?<FracMixedVisual {...q.fracMixedHint}/>:q.fracSubHint?<FracSubVisual {...q.fracSubHint}/>:q.fracSubMixedHint?<FracSubMixedVisual {...q.fracSubMixedHint}/>:q.fracDivHint?<FracDivVisual {...q.fracDivHint}/>:q.decColHint?<DecimalColVisual {...q.decColHint}/>:q.divHint?null:<NoteBox exp={exp} showExample={true} dynamicHint={q.dynamicHint}/>}{q.divHint&&<DivisionExplanation dividend={q.divHint.dividend} divisor={q.divHint.divisor}/>}{(YT[q.topic]||[]).map(function(v,i){return <a key={i} href={v.url} target="_blank" rel="noreferrer" style={{display:"block",background:"#ef4444",color:"#fff",borderRadius:8,padding:"8px 14px",textDecoration:"none",fontWeight:700,fontSize:13,marginBottom:6}}>▶ Watch: {v.label}</a>;})}</div>)}<Btn onClick={advanceAfterFeedback} style={{width:"100%",marginTop:12,padding:14,fontSize:16}}>{qIdx+1<total?"Next Question":"See Results"}</Btn></div>)}
+        <QuestionCard q={q} qNum={qIdx+1} inputRef={inputRef} ansValue={ans} onAnsChange={function(e){setAns(e.target.value);}} onSubmit={submitAns} submitted={qSubmitted} isCorrect={isCorrect}>
+          {qSubmitted&&!noMidReview&&(<div style={{padding:16,borderTop:"1px solid #e5e7eb"}}><div style={{background:isCorrect?C.greenL:C.redL,borderRadius:10,padding:14,textAlign:"center",marginBottom:isCorrect?0:12}}><div style={{fontSize:30}}>{isCorrect?"✅":"❌"}</div><div style={{fontWeight:800,color:isCorrect?C.green:C.red,fontSize:20}}>{isCorrect?"Correct! Well done!":"Not quite"}</div>{!isCorrect&&<div style={{fontSize:14,marginTop:4}}>The answer was <strong>{renderMath(String(q.answer))}</strong></div>}</div>{!isCorrect&&(<div style={{marginTop:12}}>{q.colHint?<CombinedHintBox exp={exp} colHint={q.colHint}/>:q.pvHint?<ColHintPlaceValue {...q.pvHint}/>:q.decHint?<ColHintDecSub {...q.decHint}/>:q.pvGridHint?<PlaceValueGrid {...q.pvGridHint} showArrows={true}/>:q.sdHint?<ColHintShortDiv {...q.sdHint} hideAnswer={false}/>:q.fracAddHint?<FracAddVisual {...q.fracAddHint}/>:q.fracMixedHint?<FracMixedVisual {...q.fracMixedHint}/>:q.fracSubHint?<FracSubVisual {...q.fracSubHint}/>:q.fracSubMixedHint?<FracSubMixedVisual {...q.fracSubMixedHint}/>:q.fracDivHint?<FracDivVisual {...q.fracDivHint}/>:q.decColHint?<DecimalColVisual {...q.decColHint}/>:q.divHint?null:<NoteBox exp={exp} showExample={true} dynamicHint={q.dynamicHint}/>}{q.divHint&&<DivisionExplanation dividend={q.divHint.dividend} divisor={q.divHint.divisor}/>}{(YT[q.topic]||[]).map(function(v,i){return <a key={i} href={v.url} target="_blank" rel="noreferrer" style={{display:"block",background:"#ef4444",color:"#fff",borderRadius:8,padding:"8px 14px",textDecoration:"none",fontWeight:700,fontSize:13,marginBottom:6}}>▶ Watch: {v.label}</a>;})}</div>)}<Btn onClick={advanceAfterFeedback} style={{width:"100%",marginTop:12,padding:14,fontSize:16}}>{qIdx+1<total?"Next Question":"See Results"}</Btn></div>)}
         </QuestionCard>
-        {!submitted&&<Btn onClick={submitAns} style={{width:"100%",marginTop:12,padding:14,fontSize:16}}>Submit Answer</Btn>}
+        {!qSubmitted&&<Btn onClick={submitAns} style={{width:"100%",marginTop:12,padding:14,fontSize:16}}>Submit Answer</Btn>}
       </div>
     </div>
   );
@@ -1766,7 +1943,7 @@ function PupilDashboard({user,onUpdate,onLogout,assignments,streakSettings}){
   const startPractice=function(m,topicOverride){
     setActiveAssignment(null);
     let qs;
-    if(m==="full-paper")qs=generateFullPaper();
+    if(m==="full-paper"||m==="exam-paper"||m==="practice-paper")qs=generateFullPaper();
     else if(m==="topic"&&topicOverride){const usedP=new Set();qs=Array.from({length:10},function(){return genQ(topicOverride,usedP);});}
     else qs=Object.keys(TOPIC_NAMES).sort(function(){return Math.random()-0.5;}).slice(0,10).map(function(t){return genQ(t,new Set());});
     setQuestions(qs);setMode(m);setView("practice");
@@ -1785,7 +1962,7 @@ function PupilDashboard({user,onUpdate,onLogout,assignments,streakSettings}){
       if(!updated.topicProgress[r.topic])updated.topicProgress[r.topic]={attempts:[]};
       updated.topicProgress[r.topic]=Object.assign({},updated.topicProgress[r.topic],{attempts:updated.topicProgress[r.topic].attempts.concat([r.correct?1:0])});
     });
-    if(mode==="full-paper"||activeAssignment?.mode==="full-paper"){
+    if(mode==="full-paper"||mode==="exam-paper"||mode==="practice-paper"||activeAssignment?.mode==="full-paper"){
       const tm=Math.min(40,res.reduce(function(s,r){return s+(r.marks||0);},0));
       updated.fullPapers=updated.fullPapers.concat([{score:tm,marks:40,date:todayStr(),results:res}]);
     }
@@ -1830,7 +2007,7 @@ function PupilDashboard({user,onUpdate,onLogout,assignments,streakSettings}){
         <Card style={{marginBottom:16}}>
           <h3 style={{margin:"0 0 14px",fontSize:17}}>Start Practising</h3>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(190px,1fr))",gap:12}}>
-            {[{m:"quick",icon:"⚡",label:"Quick Practice",sub:"10 questions, no timer",color:C.primaryL,tc:C.primary},{m:"timed",icon:"⏱",label:"Timed Practice",sub:"10 questions, 12 mins",color:C.primaryL,tc:C.primary},{m:"full-paper",icon:"📄",label:"Full Paper",sub:"36 questions, 30 mins",color:C.primary,tc:"#fff"}].map(function(item){return(<button key={item.m} onClick={function(){startPractice(item.m);}} style={{background:item.color,color:item.tc,border:"none",borderRadius:12,padding:16,textAlign:"left",cursor:"pointer",fontFamily:"system-ui"}}><div style={{fontSize:30,marginBottom:4}}>{item.icon}</div><div style={{fontWeight:800,fontSize:15}}>{item.label}</div><div style={{fontSize:12,opacity:0.8,marginTop:2}}>{item.sub}</div></button>);})  }
+            {[{m:"quick",icon:"⚡",label:"Quick Practice",sub:"10 questions, no timer",color:C.primaryL,tc:C.primary},{m:"timed",icon:"⏱",label:"Timed Practice",sub:"10 questions, 12 mins",color:C.primaryL,tc:C.primary},{m:"exam-paper",icon:"⏱",label:"Full Paper (Exam)",sub:"36 questions, 30 min timer",color:C.primary,tc:"#fff"},{m:"practice-paper",icon:"📄",label:"Full Paper (Practice)",sub:"36 questions, no timer",color:"#16a34a",tc:"#fff"}].map(function(item){return(<button key={item.m} onClick={function(){startPractice(item.m);}} style={{background:item.color,color:item.tc,border:"none",borderRadius:12,padding:16,textAlign:"left",cursor:"pointer",fontFamily:"system-ui"}}><div style={{fontSize:30,marginBottom:4}}>{item.icon}</div><div style={{fontWeight:800,fontSize:15}}>{item.label}</div><div style={{fontSize:12,opacity:0.8,marginTop:2}}>{item.sub}</div></button>);})  }
           </div>
         </Card>
         <Card style={{marginBottom:16}}>
