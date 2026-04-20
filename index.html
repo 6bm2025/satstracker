@@ -2562,7 +2562,7 @@ function LoginScreen({onLogin}){
               {selectedTeacher?(
                 <div style={{display:"flex",alignItems:"center",gap:8}}>
                   <div style={Object.assign({},inp,{marginBottom:0,flex:1,color:"#1a1a1a",background:"#f0fdf4",border:"1.5px solid #16a34a",borderRadius:8,padding:"10px 12px",fontSize:15})}>
-                    {(function(){const t=teachers.find(function(t){return t.id===selectedTeacher;});return t?t.name+" "+t.surname+(t.class_name?" ("+t.class_name+")":""):"";})()}
+                    {(function(){const t=teachers.find(function(t){return t.id===selectedTeacher;});return t?(t.class_name||"Your class"):"";})()}
                   </div>
                   <button onClick={function(){setSelectedTeacher("");setClassSearch("");setSelectedPupil("");}} style={{background:"none",border:"1.5px solid #d1d5db",borderRadius:8,padding:"10px 12px",cursor:"pointer",fontSize:13,color:"#666",whiteSpace:"nowrap"}}>Change</button>
                 </div>
@@ -2579,15 +2579,14 @@ function LoginScreen({onLogin}){
                   {showClassList&&classSearch&&(function(){
                     const filtered=teachers.filter(function(t){
                       const q=classSearch.toLowerCase();
-                      return (t.name+" "+t.surname).toLowerCase().includes(q)||(t.class_name||"").toLowerCase().includes(q);
+                      return (t.class_name||"").toLowerCase().includes(q);
                     });
                     if(!filtered.length)return <div style={{border:"1.5px solid #e2e8f0",borderTop:"none",borderRadius:"0 0 8px 8px",background:"#fff",padding:"10px 12px",fontSize:13,color:"#999"}}>No classes found</div>;
                     return(
                       <div style={{position:"absolute",zIndex:20,left:0,right:0,border:"1.5px solid #e2e8f0",borderTop:"none",borderRadius:"0 0 8px 8px",background:"#fff",boxShadow:"0 4px 12px rgba(0,0,0,0.1)",maxHeight:200,overflowY:"auto"}}>
                         {filtered.map(function(t){return(
-                          <div key={t.id} onClick={function(){setSelectedTeacher(t.id);setClassSearch("");setShowClassList(false);}} style={{padding:"10px 14px",cursor:"pointer",fontSize:14,borderBottom:"1px solid #f3f4f6",background:hoveredClass===t.id?"#f0f4ff":"#fff"}} onMouseEnter={function(){setHoveredClass(t.id);}} onMouseLeave={function(){setHoveredClass(null);}}>
-                            <span style={{fontWeight:700}}>{t.class_name||t.name+" "+t.surname}</span>
-                            {t.class_name&&<span style={{color:"#888",fontSize:12,marginLeft:6}}>{t.name} {t.surname}</span>}
+                          <div key={t.id} onClick={function(){setSelectedTeacher(t.id);setClassSearch("");setShowClassList(false);}} onMouseEnter={function(){setHoveredClass(t.id);}} onMouseLeave={function(){setHoveredClass(null);}} style={{padding:"10px 14px",cursor:"pointer",fontSize:14,borderBottom:"1px solid #f3f4f6",background:hoveredClass===t.id?"#f0f4ff":"#fff"}}>
+                            <span style={{fontWeight:700}}>{t.class_name||"Unnamed class"}</span>
                           </div>
                         );})}
                       </div>
