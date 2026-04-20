@@ -50,6 +50,7 @@ async function sbSavePupil(teacherId,className,pupil){const parts=(pupil.name||"
 async function sbDeletePupil(id){await sb.from("users").delete().eq("id",id);}
 async function sbCreateTeacher(name,surname,username,password,className){await sb.from("users").insert({name,surname,role:"teacher",username,password,class_name:className||""});}
 async function sbUpdatePassword(id,password){await sb.from("users").update({password}).eq("id",id);}
+async function sbDeleteTeacher(id){await sb.from("scores").delete().eq("user_id",id);await sb.from("users").delete().eq("teacher_id",id);await sb.from("users").delete().eq("id",id);}
 async function sbGetAllUsers(){const{data}=await sb.from("users").select("*").order("role").order("surname");return data||[];}
 
 const gcd=(a,b)=>b===0?a:gcd(b,a%b);
@@ -2714,6 +2715,7 @@ function AdminDashboard({admin,allUsers,onLogout}){
   const[showAdd,setShowAdd]=useState(false);
   const[form,setForm]=useState({name:"",surname:"",username:"",password:"",class_name:""});
   const[resetTarget,setResetTarget]=useState(null);
+  const[deleteTarget,setDeleteTarget]=useState(null);
   const[newPw,setNewPw]=useState("");
   const[msg,setMsg]=useState("");
   const[loading,setLoading]=useState(false);
@@ -2742,6 +2744,15 @@ function AdminDashboard({admin,allUsers,onLogout}){
       await sbUpdatePassword(resetTarget,newPw.trim());
       setMsg("Password reset successfully.");setResetTarget(null);setNewPw("");
     }catch(e){setMsg("Error resetting password.");}
+    setLoading(false);
+  };
+  const handleDeleteTeacher=async function(id,name){
+    if(!window.confirm("Delete teacher account for "+name+"? This will also delete all their pupils and scores. This cannot be undone."))return;
+    setLoading(true);
+    try{
+      await sbDeleteTeacher(id);
+      setMsg("Teacher account deleted.");await refreshUsers();
+    }catch(e){setMsg("Error deleting account.");}
     setLoading(false);
   };
 
@@ -2804,6 +2815,7 @@ function AdminDashboard({admin,allUsers,onLogout}){
                     <td style={{padding:"11px 16px",fontSize:14,color:"#666"}}>{t.class_name||"—"}</td>
                     <td style={{padding:"11px 16px"}}>
                       <button onClick={function(){setResetTarget(t.id);setMsg("");}} style={{background:"#f0f0f0",border:"none",borderRadius:6,padding:"5px 12px",cursor:"pointer",fontSize:13}}>Reset password</button>
+                      <button onClick={function(){handleDeleteTeacher(t.id,t.name+" "+t.surname);}} style={{background:"#fff5f5",color:"#c53030",border:"1px solid #fed7d7",borderRadius:6,padding:"5px 12px",cursor:"pointer",fontSize:13,marginLeft:6}}>Delete</button>
                     </td>
                   </tr>
                 );})}
