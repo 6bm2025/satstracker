@@ -2599,7 +2599,7 @@ function LoginScreen({onLogin}){
               <label style={{fontSize:13,color:"#555",display:"block",marginBottom:5,fontWeight:500}}>Your name</label>
               <select value={selectedPupil} onChange={function(e){setSelectedPupil(e.target.value);}} disabled={!selectedTeacher||loadingPupils} style={Object.assign({},inp,{color:selectedPupil?"#1a1a1a":"#999"})}>
                 <option value="">{loadingPupils?"Loading pupils...":!selectedTeacher?"Select your class first":"— choose your name —"}</option>
-                {pupils.map(function(p){return <option key={p.id} value={p.id}>{p.surname}, {p.firstName}</option>;})}
+                {pupils.map(function(p){return <option key={p.id} value={p.id}>{p.surname}, {p.firstName?p.firstName[0]+".":""}</option>;})}
               </select>
             </div>
             <div style={{marginBottom:18}}>
