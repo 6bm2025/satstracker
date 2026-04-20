@@ -1686,6 +1686,7 @@ function PracticeSession({mode,questions,onComplete,onExit}){
   const noMidReview=isFullPaper||mode==="timed"||mode==="custom-timed";
   const PER_PAGE=6;
   const[page,setPage]=useState(0);
+  const[mobileQ,setMobileQ]=useState(0);
   const[answers,setAnswers]=useState({});
   const[submitted,setSubmitted]=useState(false);
   const[results,setResults]=useState([]);
@@ -1789,12 +1790,18 @@ function PracticeSession({mode,questions,onComplete,onExit}){
   if(isFullPaper){
     const pageStart=page*PER_PAGE;
     const pageQs=questions.slice(pageStart,pageStart+PER_PAGE);
+    const isMobile=typeof window!=="undefined"&&window.innerWidth<600;
+    const mobileTotal=questions.length;
+    const mobileQ_safe=Math.min(mobileQ,mobileTotal-1);
+    const mobileSaved=answers[mobileQ_safe];
+    const mobileAns=mobileSaved?mobileSaved.userAnswer:"";
+    const mobilePq=questions[mobileQ_safe];
     return(
       <div style={{minHeight:"100vh",background:"#f0f0f0",fontFamily:"system-ui"}}>
         <div style={{background:"#fff",borderBottom:"2px solid #111",padding:"10px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:10}}>
           <button onClick={function(){setExitConfirm(true);}} style={{background:"none",border:"1px solid #ccc",borderRadius:6,cursor:"pointer",fontSize:13,color:C.textL,padding:"4px 10px"}}>Exit</button>
           <div style={{display:"flex",alignItems:"center",gap:12}}>
-            <span style={{fontSize:13,color:C.textL}}>Page {page+1} of {totalPages}</span>
+            <span style={{fontSize:13,color:C.textL}}>{isMobile?"Q"+(mobileQ_safe+1)+" of "+mobileTotal:"Page "+(page+1)+" of "+totalPages}</span>
             {hasTimer&&timeLeft!==null&&(
               <div style={{display:"flex",alignItems:"center",gap:8}}>
                 <span style={{fontWeight:700,fontSize:16,color:timeLeft<60?C.red:C.text,fontFamily:"monospace",minWidth:48}}>{fmtTime(timeLeft)}</span>
@@ -1804,11 +1811,23 @@ function PracticeSession({mode,questions,onComplete,onExit}){
             <span style={{fontSize:12,fontWeight:700,background:mode==="exam-paper"?C.primary:"#16a34a",color:"#fff",padding:"3px 10px",borderRadius:99}}>{mode==="exam-paper"?"Exam Conditions":"Practice Paper"}</span>
           </div>
           <div style={{display:"flex",gap:8}}>
-            {page>0&&<Btn onClick={function(){setPage(function(p){return p-1;});}} color={C.grayL} textColor={C.text} style={{padding:"6px 14px",fontSize:13}}>← Previous</Btn>}
-            {page<totalPages-1
-              ?<Btn onClick={function(){setPage(function(p){return p+1;});}} style={{padding:"6px 14px",fontSize:13}}>Next →</Btn>
-              :<Btn onClick={function(){if(window.confirm("Submit your paper? Make sure you have answered all questions."))submitFullPaper();}} color={C.green} style={{padding:"6px 14px",fontSize:13}}>Submit Paper</Btn>
-            }
+            {isMobile?(
+              <>
+                {mobileQ_safe>0&&<Btn onClick={function(){setMobileQ(function(q){return q-1;});}} color={C.grayL} textColor={C.text} style={{padding:"6px 14px",fontSize:13}}>← Back</Btn>}
+                {mobileQ_safe<mobileTotal-1
+                  ?<Btn onClick={function(){setMobileQ(function(q){return q+1;});}} style={{padding:"6px 14px",fontSize:13}}>Next →</Btn>
+                  :<Btn onClick={function(){if(window.confirm("Submit your paper? Make sure you have answered all questions."))submitFullPaper();}} color={C.green} style={{padding:"6px 14px",fontSize:13}}>Submit</Btn>
+                }
+              </>
+            ):(
+              <>
+                {page>0&&<Btn onClick={function(){setPage(function(p){return p-1;});}} color={C.grayL} textColor={C.text} style={{padding:"6px 14px",fontSize:13}}>← Previous</Btn>}
+                {page<totalPages-1
+                  ?<Btn onClick={function(){setPage(function(p){return p+1;});}} style={{padding:"6px 14px",fontSize:13}}>Next →</Btn>
+                  :<Btn onClick={function(){if(window.confirm("Submit your paper? Make sure you have answered all questions."))submitFullPaper();}} color={C.green} style={{padding:"6px 14px",fontSize:13}}>Submit Paper</Btn>
+                }
+              </>
+            )}
           </div>
         </div>
 
@@ -1826,6 +1845,56 @@ function PracticeSession({mode,questions,onComplete,onExit}){
         {exitConfirm&&(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:100,display:"flex",alignItems:"center",justifyContent:"center"}}><Card style={{maxWidth:340,width:"90%",textAlign:"center"}}><h3 style={{marginBottom:8}}>Exit Paper?</h3><p style={{color:C.textL,fontSize:14,marginBottom:16}}>Your progress won't be saved.</p><div style={{display:"flex",gap:10}}><Btn onClick={onExit} color={C.red} style={{flex:1}}>Exit</Btn><Btn onClick={function(){setExitConfirm(false);}} color={C.grayL} textColor={C.text} style={{flex:1}}>Continue</Btn></div></Card></div>)}
 
         <div style={{maxWidth:900,margin:"0 auto",padding:"20px 16px"}}>
+          {isMobile?(
+            <div>
+              {(function(){
+                const pq=mobilePq;const globalIdx=mobileQ_safe;
+                const isTM=pq.isTwoMark||TWO_MARK.has(pq.topic);
+                const marks=isTM?2:1;
+                const workH=170;
+                const currentAns=mobileAns;
+                return(
+                  <div style={{border:"2px solid #111",background:"#fff",display:"flex",marginBottom:12}}>
+                    <div style={{width:40,flexShrink:0,borderRight:"2px solid #111",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-start",paddingTop:8,background:"#fff"}}>
+                      <span style={{fontWeight:400,fontSize:16,color:"#111"}}>{globalIdx+1}</span>
+                      {isTM&&<span style={{fontSize:6.5,color:"#555",marginTop:6,writingMode:"vertical-rl",transform:"rotate(180deg)"}}>Show method</span>}
+                    </div>
+                    <div style={{flex:1,display:"flex",flexDirection:"column",minWidth:0}}>
+                      <div style={{padding:"10px 12px",borderBottom:"1px solid #ccc",overflow:"hidden",whiteSpace:pq.leftBox?"nowrap":"normal"}}>
+                        {pq.leftBox
+                          ?<div style={{display:"flex",alignItems:"center",gap:6,whiteSpace:"nowrap"}}>
+                            <input value={currentAns} onChange={function(e){recordAnswer(globalIdx,e.target.value);}} style={{width:70,height:32,border:"2px solid #111",borderRadius:0,textAlign:"center",fontSize:18,fontWeight:700,fontFamily:"monospace",outline:"none",flexShrink:0}}/>
+                            <span style={{fontSize:18,fontWeight:700,fontFamily:"monospace"}}>{renderMath(pq.question.replace("= ",""),"0.9em")}</span>
+                          </div>
+                          :<span style={{fontSize:20,fontWeight:700,fontFamily:"monospace"}}>{renderMath(pq.question,"0.9em")}</span>
+                        }
+                      </div>
+                      <div style={{position:"relative",height:workH,overflow:"hidden"}}>
+                        <svg style={{position:"absolute",inset:0,width:"100%",height:"100%",pointerEvents:"none"}} preserveAspectRatio="none">
+                          <defs><pattern id={"msq"+globalIdx} x="0" y="0" width="14" height="14" patternUnits="userSpaceOnUse"><path d="M 14 0 L 0 0 0 14" fill="none" stroke="#e8a0a0" strokeWidth="0.7"/></pattern></defs>
+                          <rect width="100%" height="100%" fill="#fff"/>
+                          <rect width="100%" height="100%" fill={"url(#msq"+globalIdx+")"}/>
+                        </svg>
+                        {!pq.leftBox&&(
+                          <input value={currentAns} onChange={function(e){recordAnswer(globalIdx,e.target.value);}} style={{position:"absolute",bottom:16,right:6,width:120,height:40,border:"2px solid #111",borderRadius:0,textAlign:"center",fontSize:20,fontWeight:700,fontFamily:"monospace",outline:"none",background:"#fff",zIndex:1}} autoFocus/>
+                        )}
+                      </div>
+                    </div>
+                    <div style={{width:54,flexShrink:0,borderLeft:"2px solid #111",background:C.satsMark,position:"relative"}}>
+                      <div style={{position:"absolute",bottom:16,left:"50%",transform:"translateX(-50%)",width:30,height:40,border:"1.5px solid #111",background:"#fff"}}/>
+                      <span style={{position:"absolute",bottom:4,left:0,right:0,textAlign:"center",fontSize:9,fontWeight:400,color:"#111",whiteSpace:"nowrap"}}>{marks} mark{marks>1?"s":""}</span>
+                    </div>
+                  </div>
+                );
+              })()}
+              <div style={{display:"flex",justifyContent:"center",gap:4,flexWrap:"wrap",padding:"8px 0"}}>
+                {Array.from({length:mobileTotal}).map(function(_,qi){const done=answers[qi]&&answers[qi].userAnswer;return(
+                  <button key={qi} onClick={function(){setMobileQ(qi);}} style={{width:28,height:28,border:"2px solid "+(qi===mobileQ_safe?"#111":"#ccc"),borderRadius:4,background:done?"#e0e7ff":qi===mobileQ_safe?"#111":"#fff",color:qi===mobileQ_safe&&!done?"#fff":"#111",fontWeight:700,fontSize:11,cursor:"pointer"}}>{qi+1}</button>
+                );})}
+              </div>
+              <div style={{textAlign:"center",fontSize:12,color:C.textL,padding:"4px 0"}}>{Object.keys(answers).length} of {mobileTotal} answered</div>
+            </div>
+          ):(
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
             {pageQs.map(function(pq,pi){
               const globalIdx=pageStart+pi;
@@ -1877,13 +1946,14 @@ function PracticeSession({mode,questions,onComplete,onExit}){
               );
             })}
           </div>
+          )}
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:16,padding:"12px 0",borderTop:"1px solid #ccc"}}>
-            <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+            {!isMobile&&<div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
               {Array.from({length:totalPages}).map(function(_,pi){return(
                 <button key={pi} onClick={function(){setPage(pi);}} style={{width:32,height:32,border:"2px solid "+(pi===page?"#111":"#ccc"),borderRadius:4,background:pi===page?"#111":"#fff",color:pi===page?"#fff":"#111",fontWeight:700,fontSize:13,cursor:"pointer"}}>{pi+1}</button>
               );})}
-            </div>
-            <div style={{fontSize:13,color:C.textL}}>{Object.keys(answers).length} of {total} answered</div>
+            </div>}
+            {!isMobile&&<div style={{fontSize:13,color:C.textL}}>{Object.keys(answers).length} of {total} answered</div>}
           </div>
         </div>
       </div>
