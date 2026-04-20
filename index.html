@@ -46,13 +46,14 @@ async function sbLoginPupil(id,password){const{data,error}=await sb.from("users"
 async function sbLoginTeacher(username,password){const{data,error}=await sb.from("users").select("*").eq("username",username).in("role",["teacher","admin"]).single();if(error||!data)return null;if(data.password!==password)return null;return data;}
 async function sbGetScores(userId){const{data,error}=await sb.from("scores").select("*").eq("user_id",userId);if(error)return{};const p={};(data||[]).forEach(function(r){p[r.topic]={attempts:r.results,lastPractised:r.last_practised};});return p;}
 async function sbSaveScores(userId,topicProgress){const rows=Object.keys(topicProgress).map(function(topic){const t=topicProgress[topic];return{user_id:userId,topic,results:t.attempts||[],last_practised:t.lastPractised||new Date().toISOString(),updated_at:new Date().toISOString()};});if(!rows.length)return;await sb.from("scores").upsert(rows,{onConflict:"user_id,topic"});}
-async function sbSavePupil(teacherId,className,pupil){const parts=(pupil.name||"").trim().split(" ");const surname=parts.length>1?parts.pop():"";const firstName=parts.join(" ")||surname;const rec={name:firstName,surname,role:"pupil",password:pupil.password||"sats2025",teacher_id:teacherId,class_name:className||""};if(pupil.id){await sb.from("users").update(rec).eq("id",pupil.id);}else{await sb.from("users").insert(rec);}}
+async function sbSavePupil(teacherId,className,pupil){const parts=(pupil.name||"").trim().split(" ");const surname=parts.length>1?parts.pop():"";const firstName=parts.join(" ")||surname;const rec={name:firstName,surname,role:"pupil",password:pupil.password||genDefaultPwd(),teacher_id:teacherId,class_name:className||""};if(pupil.id){await sb.from("users").update(rec).eq("id",pupil.id);}else{await sb.from("users").insert(rec);}}
 async function sbDeletePupil(id){await sb.from("users").delete().eq("id",id);}
 async function sbCreateTeacher(name,surname,username,password,className){await sb.from("users").insert({name,surname,role:"teacher",username,password,class_name:className||""});}
 async function sbUpdatePassword(id,password){await sb.from("users").update({password}).eq("id",id);}
 async function sbGetAllUsers(){const{data}=await sb.from("users").select("*").order("role").order("surname");return data||[];}
 
 const gcd=(a,b)=>b===0?a:gcd(b,a%b);
+const genDefaultPwd=function(){const chars="abcdefhjkmnpqrstuvwxyz23456789";let p="";for(let i=0;i<6;i++)p+=chars[Math.floor(Math.random()*chars.length)];return p;};
 const simplify=(n,d)=>{const g=gcd(Math.abs(n),Math.abs(d));return[n/g,d/g];};
 const rnd=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
 const pick=arr=>arr[Math.floor(Math.random()*arr.length)];
@@ -2862,7 +2863,7 @@ function PupilManagementPanel({teacher,pupils,onRefresh}){
     for(const line of lines){
       const parts=line.split(",").map(function(p){return p.trim();});
       if(parts.length<2)continue;
-      const firstName=parts[0],surname=parts[1],password=parts[2]||"sats2025";
+      const firstName=parts[0],surname=parts[1],password=parts[2]||genDefaultPwd();
       try{await sbSavePupil(teacher.id,teacher.class_name,{name:firstName+" "+surname,password});added++;}
       catch(e){errors++;}
     }
@@ -2885,7 +2886,7 @@ function PupilManagementPanel({teacher,pupils,onRefresh}){
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"0 10px"}}>
             <div><label style={{fontSize:12,color:"#666",display:"block",marginBottom:3}}>First name</label><input value={form.name} onChange={function(e){setForm(Object.assign({},form,{name:e.target.value}));}} placeholder="e.g. Emma" style={inp}/></div>
             <div><label style={{fontSize:12,color:"#666",display:"block",marginBottom:3}}>Surname</label><input value={form.surname} onChange={function(e){setForm(Object.assign({},form,{surname:e.target.value}));}} placeholder="e.g. Smith" style={inp}/></div>
-            <div><label style={{fontSize:12,color:"#666",display:"block",marginBottom:3}}>Password</label><input value={form.password} onChange={function(e){setForm(Object.assign({},form,{password:e.target.value}));}} placeholder="e.g. sats2025" style={inp}/></div>
+            <div><label style={{fontSize:12,color:"#666",display:"block",marginBottom:3}}>Password</label><input value={form.password} onChange={function(e){setForm(Object.assign({},form,{password:e.target.value}));}} placeholder="e.g. sunny7k (leave blank for random)" style={inp}/></div>
           </div>
           <div style={{display:"flex",gap:8}}>
             <button onClick={handleAddPupil} disabled={loading} style={{background:"#4f46e5",color:"#fff",border:"none",borderRadius:8,padding:"8px 18px",cursor:"pointer",fontWeight:600,fontSize:14}}>{loading?"Adding...":"Add pupil"}</button>
@@ -2896,7 +2897,7 @@ function PupilManagementPanel({teacher,pupils,onRefresh}){
       {showCsv&&(
         <div style={{background:"#fffef5",borderRadius:10,padding:"16px",marginBottom:16,border:"1px solid #f5e8b0"}}>
           <div style={{fontWeight:600,marginBottom:6,fontSize:14}}>Batch import from CSV</div>
-          <div style={{fontSize:12,color:"#888",marginBottom:8}}>One pupil per line: <code>Firstname, Surname, Password</code> — password is optional (defaults to "sats2025")</div>
+          <div style={{fontSize:12,color:"#888",marginBottom:8}}>One pupil per line: <code>Firstname, Surname, Password</code> — password is optional (a random password is generated if blank)</div>
           <textarea value={csvText} onChange={function(e){setCsvText(e.target.value);}} rows={6} placeholder={"Emma, Smith, sunshine7\nLiam, Jones, football3\nOlivia, Chen"} style={{width:"100%",padding:"10px",borderRadius:8,border:"1.5px solid #e2e8f0",fontSize:13,fontFamily:"monospace",marginBottom:10,resize:"vertical"}}/>
           <div style={{display:"flex",gap:8}}>
             <button onClick={handleCsvImport} disabled={loading||!csvText.trim()} style={{background:"#4f46e5",color:"#fff",border:"none",borderRadius:8,padding:"8px 18px",cursor:"pointer",fontWeight:600,fontSize:14}}>{loading?"Importing...":"Import"}</button>
