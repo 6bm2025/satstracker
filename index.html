@@ -2610,7 +2610,9 @@ function LoginScreen({onLogin}){
       if(!pupil){setError("Pupil not found.");setLoading(false);return;}
       if(pupil.password!==pw){setError("Incorrect password — try again.");setLoading(false);return;}
       const progress=await sbGetScores(pupil.id);
-      const user=Object.assign({},pupil,{topicProgress:progress,practiseDates:[],sessions:0,lastLogin:isoToday(),fullPapers:[]});
+      const{data:uData}=await sb.from("users").select("metadata").eq("id",pupil.id).single();
+      const meta=(uData&&uData.metadata)||{};
+      const user=Object.assign({},pupil,{topicProgress:progress,practiseDates:meta.practiseDates||[],sessions:meta.sessions||0,lastLogin:isoToday(),fullPapers:meta.fullPapers||[]});
       onLogin("pupil",user,pupils,"supabase");
     }catch(e){setError("Login error — please try again.");}
     setLoading(false);
@@ -2993,8 +2995,9 @@ function App(){
   const updateUser=async function(updated,completedAssignment){
     if(updated.id&&updated.topicProgress){
       sbSaveScores(updated.id,updated.topicProgress).catch(function(e){console.error("Score save:",e);});
-      const meta={sessions:updated.sessions||0,lastLogin:updated.lastLogin||null,practiseDates:updated.practiseDates||[],fullPapers:(updated.fullPapers||[]).map(function(fp){return{score:fp.score,marks:fp.marks,date:fp.date,results:fp.results||[]};})};
-      sb.from("users").update({metadata:meta}).eq("id",updated.id).then(function(){}).catch(function(e){console.error("Metadata save:",e);});
+      const meta={sessions:updated.sessions||0,lastLogin:updated.lastLogin||null,practiseDates:updated.practiseDates||[],fullPapers:(updated.fullPapers||[]).map(function(fp){return{score:fp.score,marks:fp.marks,date:fp.date};})};
+      const{error:metaErr}=await sb.from("users").update({metadata:meta}).eq("id",updated.id);
+      if(metaErr)console.error("Metadata save error:",metaErr.message,metaErr);
     }
     const nu=session.users.map(function(u){return u.id===updated.id?updated:u;});
     let newAssignments=assignments;
