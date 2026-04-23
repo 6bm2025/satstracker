@@ -64,7 +64,7 @@ const todayStr=()=>{const d=new Date();return String(d.getDate()).padStart(2,"0"
 const isoToday=()=>new Date().toISOString().slice(0,10);
 const daysSince=iso=>{if(!iso)return null;const d=Math.floor((new Date()-new Date(iso))/(1000*60*60*24));return d;};
 const lastLoginLabel=iso=>{if(!iso)return"Never";const d=daysSince(iso);if(d===0)return"Today";if(d===1)return"Yesterday";return d+" days ago";};
-const getTopicPct=a=>{if(!a||!a.length)return null;const l=a.slice(-10);return Math.round(l.reduce((s,v)=>s+v,0)/l.length*100);};
+const getTopicPct=a=>{if(!a||!a.length)return null;const last=a.slice(-10);return last.length<3?null:Math.round(last.reduce(function(s,v){return s+v;},0)/last.length*100);};
 const pctColor=p=>p>=70?C.green:p>=50?C.yellow:C.red;
 
 // Mastery thresholds (per your spec)
@@ -421,13 +421,15 @@ function genQ(topic,usedKeys){
             ()=>{const b=pick([2,3,4,5,6,7,8,9,10,12]);return{q:b+"² =",a:b*b,k:b,dh:b+"² = "+b+" × "+b+" = "+(b*b)};},
             ()=>{const b=pick([2,3,4,5]);return{q:b+"³ =",a:b*b*b,k:b,dh:b+"³ = "+b+" × "+b+" × "+b+" = "+(b*b*b)};}
           ];
-          const r=pick(variants)();q={question:r.q,answer:r.a,leftBox:false,topic,keyNum:r.k,dynamicHint:r.dh};break;}
-        default:return genQ("addition",used);
+          const r=pick(variants)();q={question:r.q,answer:r.a,leftBox:false,topic,keyNum:r.k*100+r.a,dynamicHint:r.dh};break;}
+        default:break;
       }
       if(q&&(q.keyNum===undefined||!used.has(q.keyNum))){if(q.keyNum!==undefined)used.add(q.keyNum);return q;}
     }catch(e){}
   }
-  return{question:rnd(10,99)+" + "+rnd(10,99)+" =",answer:50,leftBox:false,topic:"addition",keyNum:999};
+  // Emergency fallback - generate simplest version of the requested topic
+  const a=rnd(10,99),b=rnd(10,99);
+  return{question:a+" + "+b+" =",answer:a+b,leftBox:false,topic:topic||"addition",keyNum:a*100+b};
 }
 
 const EXP={
@@ -1564,7 +1566,7 @@ function WorkingArea({height,children}){
 function QuestionCard({q,qNum,inputRef,ansValue,onAnsChange,onSubmit,submitted,isCorrect,children}){
   const isTwoMark=q.isTwoMark||TWO_MARK.has(q.topic);const marks=isTwoMark?2:1;
   const markColW=62;const numColW=44;const ansW=120;const ansH=38;const ansBottom=20;
-  const inlineInput=<input ref={inputRef} value={ansValue} onChange={onAnsChange} onKeyDown={function(e){if(e.key==="Enter")onSubmit();}} readOnly={submitted} style={{width:70,height:30,border:"2px solid #111",borderRadius:0,textAlign:"center",fontSize:18,fontWeight:700,fontFamily:"monospace",outline:"none",background:submitted?(isCorrect?"#dcfce7":"#fee2e2"):"#fff",flexShrink:0}}/>;
+  const inlineInput=<input ref={inputRef} value={ansValue} onChange={onAnsChange} onKeyDown={function(e){if(e.key==="Enter")onSubmit();}} readOnly={submitted} inputMode="decimal" autoCorrect="off" autoComplete="off" autoCapitalize="off" style={{width:70,height:30,border:"2px solid #111",borderRadius:0,textAlign:"center",fontSize:18,fontWeight:700,fontFamily:"monospace",outline:"none",background:submitted?(isCorrect?"#dcfce7":"#fee2e2"):"#fff",flexShrink:0}}/>;
   const qDisplay=<span style={{fontSize:20,fontWeight:700,fontFamily:"monospace",whiteSpace:"nowrap"}}>{renderMath(q.question,"0.85em")}</span>;
   const workH=isTwoMark?220:160;
   return(
@@ -1581,7 +1583,7 @@ function QuestionCard({q,qNum,inputRef,ansValue,onAnsChange,onSubmit,submitted,i
         </div>
         <WorkingArea height={workH}>
           {!q.leftBox&&(<div style={{position:"absolute",bottom:ansBottom,right:8,zIndex:2}}>
-            <input ref={inputRef} value={ansValue} onChange={onAnsChange} onKeyDown={function(e){if(e.key==="Enter")onSubmit();}} readOnly={submitted} style={{width:ansW,height:ansH,border:"2px solid #111",borderRadius:0,textAlign:"center",fontSize:20,fontWeight:700,fontFamily:"monospace",outline:"none",background:submitted?(isCorrect?"#dcfce7":"#fee2e2"):"#fff",display:"block"}}/>
+            <input ref={inputRef} value={ansValue} onChange={onAnsChange} onKeyDown={function(e){if(e.key==="Enter")onSubmit();}} readOnly={submitted} inputMode="decimal" autoCorrect="off" autoComplete="off" autoCapitalize="off" style={{width:ansW,height:ansH,border:"2px solid #111",borderRadius:0,textAlign:"center",fontSize:20,fontWeight:700,fontFamily:"monospace",outline:"none",background:submitted?(isCorrect?"#dcfce7":"#fee2e2"):"#fff",display:"block"}}/>
           </div>)}
         </WorkingArea>
         {children}
@@ -1655,10 +1657,11 @@ function QuestionList({results,onReviewAll,onReviewOne,onBack,score,maxMarks,dat
         <Card style={{textAlign:"center",marginBottom:16}}>
           <div style={{fontSize:48,marginBottom:4}}>{pct>=80?"🏆":pct>=60?"⭐":"💪"}</div>
           <div style={{fontSize:32,fontWeight:900,color:C.primary}}>{score} / {maxMarks}</div>
+          <div style={{fontSize:13,color:C.textL,marginTop:2,marginBottom:2}}>{maxMarks===40?"marks out of 40":"questions correct"}</div>
           <div style={{fontSize:20,color:pctColor(pct),fontWeight:800}}>{pct}%</div>
           {date&&<div style={{fontSize:13,color:C.textL,marginTop:4}}>{date}</div>}
           {mistakes.length>0&&<Btn onClick={onReviewAll} style={{marginTop:12,width:"100%",padding:14,fontSize:15}}>Review all {mistakes.length} mistake{mistakes.length!==1?"s":""} in order</Btn>}
-          {mistakes.length===0&&<div style={{background:C.greenL,borderRadius:8,padding:12,marginTop:12,fontSize:15,color:C.green,fontWeight:700}}>Perfect — no mistakes!</div>}
+          {mistakes.length===0&&<div style={{background:C.greenL,borderRadius:8,padding:12,marginTop:12,fontSize:15,color:C.green,fontWeight:700}}>Perfect score!</div>}
         </Card>
         <Card style={{marginBottom:16}}>
           <h3 style={{margin:"0 0 12px",fontSize:16}}>All Questions — click any ❌ to review it</h3>
@@ -1749,14 +1752,21 @@ function PracticeSession({mode,questions,onComplete,onExit}){
   useEffect(function(){if(done&&finalResults)onComplete(finalResults);},[done,finalResults]);
 
   const submitFullPaper=function(){
-    const allRes=questions.map(function(qq,i){return answers[i]?Object.assign({},qq,answers[i]):Object.assign({},qq,{userAnswer:"",correct:false,marks:0});});
-    const capped=allRes.map(function(r){return Object.assign({},r,{marks:Math.min(r.marks||0,TWO_MARK.has(r.topic)?2:1)});});
-    setFinalResults(capped);setDone(true);
+    const allRes=questions.map(function(qq,i){
+      if(answers[i]){
+        const saved=answers[i];
+        const maxM=TWO_MARK.has(qq.topic)?2:1;
+        return Object.assign({},qq,saved,{marks:saved.correct?Math.min(saved.marks||0,maxM):0});
+      }
+      return Object.assign({},qq,{userAnswer:"",correct:false,marks:0});
+    });
+    setFinalResults(allRes);setDone(true);
   };
 
   const recordAnswer=function(idx,ua){
     const q=questions[idx];
-    const ok=answersMatch(ua.trim().replace(/,/g,""),q.answer,q.isText);
+    const trimmed=ua.trim().replace(/,/g,"");
+    const ok=trimmed!==""&&answersMatch(trimmed,q.answer,q.isText);
     const isTM=TWO_MARK.has(q.topic);const marks=ok?(isTM?2:1):0;
     setAnswers(function(prev){return Object.assign({},prev,{[idx]:{userAnswer:ua,correct:ok,marks:marks}});});
   };
@@ -1834,7 +1844,7 @@ function PracticeSession({mode,questions,onComplete,onExit}){
         </div>
 
         {paused&&(
-          <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",zIndex:50,display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <div style={{position:"fixed",inset:0,background:"#f0f0f0",zIndex:50,display:"flex",alignItems:"center",justifyContent:"center"}}>
             <div style={{background:"#fff",borderRadius:16,padding:"40px 48px",textAlign:"center",maxWidth:360}}>
               <div style={{fontSize:48,marginBottom:12}}>⏸</div>
               <h2 style={{marginBottom:8}}>Paper Paused</h2>
@@ -1865,7 +1875,7 @@ function PracticeSession({mode,questions,onComplete,onExit}){
                       <div style={{padding:"10px 12px",borderBottom:"1px solid #ccc",overflow:"hidden",whiteSpace:pq.leftBox?"nowrap":"normal"}}>
                         {pq.leftBox
                           ?<div style={{display:"flex",alignItems:"center",gap:6,whiteSpace:"nowrap"}}>
-                            <input value={currentAns} onChange={function(e){recordAnswer(globalIdx,e.target.value);}} style={{width:70,height:32,border:"2px solid #111",borderRadius:0,textAlign:"center",fontSize:18,fontWeight:700,fontFamily:"monospace",outline:"none",flexShrink:0}}/>
+                            <input value={currentAns} onChange={function(e){recordAnswer(globalIdx,e.target.value);}} inputMode="decimal" autoCorrect="off" autoComplete="off" autoCapitalize="off" style={{width:70,height:32,border:"2px solid #111",borderRadius:0,textAlign:"center",fontSize:18,fontWeight:700,fontFamily:"monospace",outline:"none",flexShrink:0}}/>
                             <span style={{fontSize:18,fontWeight:700,fontFamily:"monospace"}}>{renderMath(pq.question.replace("= ",""),"0.9em")}</span>
                           </div>
                           :<span style={{fontSize:20,fontWeight:700,fontFamily:"monospace"}}>{renderMath(pq.question,"0.9em")}</span>
@@ -1878,7 +1888,7 @@ function PracticeSession({mode,questions,onComplete,onExit}){
                           <rect width="100%" height="100%" fill={"url(#msq"+globalIdx+")"}/>
                         </svg>
                         {!pq.leftBox&&(
-                          <input value={currentAns} onChange={function(e){recordAnswer(globalIdx,e.target.value);}} style={{position:"absolute",bottom:16,right:6,width:120,height:40,border:"2px solid #111",borderRadius:0,textAlign:"center",fontSize:20,fontWeight:700,fontFamily:"monospace",outline:"none",background:"#fff",zIndex:1}} autoFocus/>
+                          <input value={currentAns} onChange={function(e){recordAnswer(globalIdx,e.target.value);}} inputMode="decimal" autoCorrect="off" autoComplete="off" autoCapitalize="off" style={{position:"absolute",bottom:16,right:6,width:120,height:40,border:"2px solid #111",borderRadius:0,textAlign:"center",fontSize:20,fontWeight:700,fontFamily:"monospace",outline:"none",background:"#fff",zIndex:1}} autoFocus/>
                         )}
                       </div>
                     </div>
@@ -1935,7 +1945,7 @@ function PracticeSession({mode,questions,onComplete,onExit}){
                         <input
                           value={currentAns}
                           onChange={function(e){recordAnswer(globalIdx,e.target.value);}}
-                          style={{position:"absolute",bottom:16,right:6,width:90,height:34,border:"2px solid #111",borderRadius:0,textAlign:"center",fontSize:16,fontWeight:700,fontFamily:"monospace",outline:"none",background:"#fff",zIndex:1}}
+                          inputMode="decimal" autoCorrect="off" autoComplete="off" autoCapitalize="off" style={{position:"absolute",bottom:16,right:6,width:90,height:34,border:"2px solid #111",borderRadius:0,textAlign:"center",fontSize:16,fontWeight:700,fontFamily:"monospace",outline:"none",background:"#fff",zIndex:1}}
                         />
                       )}
                     </div>
@@ -1985,10 +1995,11 @@ function PracticeSession({mode,questions,onComplete,onExit}){
   );
 }
 function ResultsScreen({results,mode,onBack,onReviewAll,onReviewOne}){
-  const totalMarks=results.reduce(function(s,r){return s+(r.marks||0);},0);
+  const isFullP=mode==="full-paper"||mode==="exam-paper"||mode==="practice-paper";
+  const totalMarks=Math.min(40,results.reduce(function(s,r){return s+(r.marks||0);},0));
   const correctCount=results.filter(function(r){return r.correct;}).length;
-  const score=mode==="full-paper"?totalMarks:correctCount;
-  const maxMarks=mode==="full-paper"?40:results.length;
+  const score=isFullP?totalMarks:correctCount;
+  const maxMarks=isFullP?40:results.length;
   return <QuestionList results={results} score={score} maxMarks={maxMarks} onReviewAll={onReviewAll} onReviewOne={onReviewOne} onBack={onBack}/>;
 }
 
@@ -2091,7 +2102,7 @@ function PupilDashboard({user,onUpdate,onLogout,assignments,streakSettings}){
         {weakTopics.length>0&&(<Card style={{marginBottom:16}}><h3 style={{margin:"0 0 6px",fontSize:17}}>Suggested Areas to Improve</h3><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(175px,1fr))",gap:10}}>{weakTopics.map(function(item){return(<button key={item.t} onClick={function(){startPractice("topic",item.t);}} style={{background:"#fff",border:"2px solid "+pctColor(item.pct),borderRadius:10,padding:12,textAlign:"left",cursor:"pointer",fontFamily:"system-ui"}}><div style={{fontWeight:700,fontSize:13,marginBottom:6}}>{TOPIC_EMOJI[item.t]||"📝"} {TOPIC_NAMES[item.t]}</div><PBar pct={item.pct} color={pctColor(item.pct)}/><div style={{fontSize:12,color:pctColor(item.pct),marginTop:4,fontWeight:700}}>{item.pct}%</div></button>);})}</div></Card>)}
         <Card>
           <h3 style={{margin:"0 0 4px",fontSize:17}}>Practice by Topic</h3>
-          <p style={{color:C.textL,fontSize:13,marginBottom:18}}>Click any tile for 10 focused questions.</p>
+          <p style={{color:C.textL,fontSize:13,marginBottom:18}}>Click any tile for 10 focused questions. Percentages show your last 10 attempts.</p>
           {TOPIC_CATEGORIES.map(function(cat,ci){const cc=CAT_COLOURS[ci];return(<div key={cat.label} style={{marginBottom:24}}><div style={{fontWeight:800,fontSize:14,color:cc.heading,marginBottom:10,display:"flex",alignItems:"center",gap:8}}><div style={{flex:1,height:3,background:cc.border,borderRadius:99}}/><span style={{background:cc.bg,border:"2px solid "+cc.border,borderRadius:20,padding:"3px 14px"}}>{cat.label}</span><div style={{flex:1,height:3,background:cc.border,borderRadius:99}}/></div><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(148px,1fr))",gap:8}}>{cat.topics.map(function(t){const d=topicProg[t];const pct=d?getTopicPct(d.attempts):null;const hasVideo=(YT[t]||[]).length>0;return(<button key={t} onClick={function(){startPractice("topic",t);}} style={{background:cc.bg,border:"2px solid "+(pct!==null?pctColor(pct):cc.border),borderRadius:12,padding:"10px 12px",textAlign:"left",cursor:"pointer",fontFamily:"system-ui"}}><div style={{fontSize:22,marginBottom:4}}>{TOPIC_EMOJI[t]||"📝"}</div><div style={{fontWeight:700,fontSize:12,lineHeight:1.3,color:cc.text,marginBottom:4}}>{TOPIC_NAMES[t]}</div>{pct!==null&&<React.Fragment><PBar pct={pct} color={pctColor(pct)}/><div style={{fontSize:11,color:pctColor(pct),marginTop:3,fontWeight:700}}>{pct}%</div></React.Fragment>}{pct===null&&<div style={{fontSize:11,color:cc.text,opacity:0.6}}>Not tried yet</div>}{hasVideo&&<div style={{fontSize:10,color:"#ef4444",marginTop:3}}>Video available</div>}</button>);})}</div></div>);})}
         </Card>
       </div>
@@ -2105,7 +2116,7 @@ function printPupilReport(p,notes){
   const papers=p.fullPapers||[];
   const allA=Object.values(tp).flatMap(function(d){return d.attempts||[];});
   const overall=allA.length?Math.round(allA.reduce(function(s,v){return s+v;},0)/allA.length*100):null;
-  const topicRows=Object.entries(tp).map(function(e){const pct=getTopicPct(e[1].attempts);const m=masteryLabel(pct);return{topic:e[0],pct,m};}).filter(function(x){return x.pct!==null;}).sort(function(a,b){return a.pct-b.pct;});
+  const topicRows=Object.entries(tp).map(function(e){const pct=getTopicPct(e[1].attempts);const m=masteryLabel(pct);return{topic:e[0],pct,m};}).filter(function(x){return x.pct!==null;}).sort(function(a,b){return b.pct-a.pct;});
   const paperRows=papers.slice(-5).map(function(fp){return "<tr><td>"+fp.date+"</td><td>"+fp.score+"/40</td><td>"+Math.round(fp.score/40*100)+"%</td></tr>";}).join("");
   const topicRowsHtml=topicRows.map(function(x){const name=TOPIC_NAMES[x.topic]||x.topic;const bar='<div style="background:#e5e7eb;border-radius:4px;height:10px;width:100%;"><div style="width:'+x.pct+'%;background:'+(x.pct>=70?"#16a34a":x.pct>=50?"#d97706":"#dc2626")+';height:100%;border-radius:4px;"></div></div>';return "<tr><td>"+name+"</td><td>"+bar+"</td><td>"+x.pct+"%</td><td>"+(x.m?x.m.label:"—")+"</td></tr>";}).join("");
   const teacherNote=(notes&&notes[p.name])?notes[p.name]:"";
@@ -2268,10 +2279,34 @@ function TeacherDashboard({teacher,pupils,onUpdatePupils,onLogout,assignments,on
           <div style={{display:"flex",gap:12,marginBottom:16,flexWrap:"wrap"}}>
             {[{label:"Sessions",val:p.sessions||0},{label:"Last Login",val:lastLoginLabel(p.lastLogin)},{label:"Overall %",val:(getPupilStats(p).overall!==null?getPupilStats(p).overall+"%":"—")},{label:"Papers",val:(p.fullPapers||[]).length}].map(function(stat){return(<div key={stat.label} style={{background:"#fff",borderRadius:10,padding:"12px 18px",boxShadow:"0 1px 6px rgba(0,0,0,0.06)",minWidth:100,textAlign:"center"}}><div style={{fontSize:22,fontWeight:900,color:C.primary}}>{stat.val}</div><div style={{fontSize:11,color:C.textL,fontWeight:700}}>{stat.label}</div></div>);})}
           </div>
-          <Card style={{marginBottom:16}}><h3 style={{margin:"0 0 12px"}}>Full Paper Progress</h3><LineGraph papers={p.fullPapers||[]}/></Card>
+          <Card style={{marginBottom:16}}>
+              <h3 style={{margin:"0 0 12px"}}>Full Paper Progress</h3>
+              <LineGraph papers={p.fullPapers||[]}/>
+              {(p.fullPapers||[]).length>0&&(
+                <div style={{marginTop:12}}>
+                  <div style={{fontSize:12,color:C.textL,marginBottom:6,fontWeight:700}}>Individual papers — click 🗑 to delete</div>
+                  <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                    {(p.fullPapers||[]).map(function(fp,fi){return(
+                      <div key={fi} style={{display:"flex",alignItems:"center",gap:4,background:C.primaryL,borderRadius:8,padding:"4px 8px",border:"1px solid "+C.primary}}>
+                        <span style={{fontSize:12,fontWeight:700}}>{fp.score}/40</span>
+                        <span style={{fontSize:11,color:C.textL}}>({fp.date})</span>
+                        <button onClick={function(){
+                          if(!window.confirm("Delete this paper result ("+fp.score+"/40 on "+fp.date+")? This cannot be undone."))return;
+                          const newPapers=(p.fullPapers||[]).filter(function(_,i){return i!==fi;});
+                          const updated=Object.assign({},p,{fullPapers:newPapers});
+                          onUpdatePupils(pupils.map(function(pu){return pu.id===p.id?updated:pu;}));
+                          const meta={sessions:updated.sessions||0,lastLogin:updated.lastLogin||null,practiseDates:updated.practiseDates||[],fullPapers:newPapers.map(function(x){return{score:x.score,marks:x.marks,date:x.date};})};
+                          sb.from("users").update({metadata:meta}).eq("id",p.id).catch(function(e){console.error(e);});
+                        }} style={{background:"none",border:"none",cursor:"pointer",fontSize:13,color:C.red,padding:"0 2px",lineHeight:1}}>🗑</button>
+                      </div>
+                    );})}
+                  </div>
+                </div>
+              )}
+            </Card>
           {weak.length>0&&(<Card style={{marginBottom:16}}><h3 style={{margin:"0 0 12px"}}>Areas to Improve</h3>{weak.map(function(item){const m=masteryLabel(item.pct);return(<div key={item.t} style={{display:"flex",alignItems:"center",gap:12,marginBottom:10}}><div style={{minWidth:180,fontSize:13,fontWeight:700}}>{TOPIC_NAMES[item.t]||item.t}</div><div style={{flex:1}}><PBar pct={item.pct} color={pctColor(item.pct)}/></div><div style={{width:44,fontSize:13,fontWeight:700,color:pctColor(item.pct),textAlign:"right"}}>{item.pct}%</div><MasteryBadge pct={item.pct}/></div>);})}</Card>)}
           <Card style={{marginBottom:16}}>
-            <h3 style={{margin:"0 0 12px"}}>All Topic Progress</h3>
+            <h3 style={{margin:"0 0 4px"}}>All Topic Progress</h3><p style={{fontSize:12,color:C.textL,marginBottom:10}}>Percentages based on last 10 attempts per topic (min. 3 to display).</p>
             {Object.keys(tp).length===0?<p style={{color:C.textL}}>No data yet.</p>:(
               <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:8}}>
                 {Object.entries(tp).map(function(e){const t=e[0],d=e[1];const pct=getTopicPct(d.attempts);if(pct===null)return null;return(<div key={t} style={{background:C.grayL,borderRadius:8,padding:"8px 10px"}}><div style={{fontSize:12,fontWeight:700,marginBottom:4}}>{TOPIC_NAMES[t]||t}</div><PBar pct={pct} color={pctColor(pct)}/><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:4}}><div style={{fontSize:11,color:pctColor(pct),fontWeight:700}}>{pct}%</div><MasteryBadge pct={pct}/></div></div>);}).filter(Boolean)}
