@@ -2159,7 +2159,7 @@ function printClassInsights(weakAreas,heatmapData){
 function bySurname(name){const p=(name||"").trim().split(" ");if(p.length<2)return name.toLowerCase();return(p[p.length-1]+" "+p.slice(0,-1).join(" ")).toLowerCase();}
 
 // ── Teacher Dashboard ─────────────────────────────────────────────────────────
-function TeacherDashboard({teacher,pupils,onUpdatePupils,onLogout,assignments,onSaveAssignments,streakSettings,onSaveStreakSettings,notes,onSaveNotes}){
+function TeacherDashboard({teacher,pupils,onUpdatePupils,onRefreshPupils,onLogout,assignments,onSaveAssignments,streakSettings,onSaveStreakSettings,notes,onSaveNotes}){
   const[tab,setTab]=useState("overview");const[viewPupil,setViewPupil]=useState(null);const[resetTarget,setResetTarget]=useState(null);const[newPw,setNewPw]=useState("");const[sortCol,setSortCol]=useState(null);const[sortDir,setSortDir]=useState("asc");const[weakSort,setWeakSort]=useState(null);
 
   // Assignment form state
@@ -2400,7 +2400,7 @@ function TeacherDashboard({teacher,pupils,onUpdatePupils,onLogout,assignments,on
                           <td style={{padding:"10px 12px"}}>{st.last3.length===0?<span style={{color:C.textL,fontSize:12}}>None yet</span>:<div style={{display:"flex",gap:4,flexWrap:"wrap"}}>{st.last3.map(function(fp,j){return <span key={j} style={{background:C.primaryL,borderRadius:6,padding:"2px 8px",fontWeight:700,fontSize:12}}>{fp.score}/40</span>;})}</div>}</td>
                           <td style={{padding:"10px 12px"}}>{st.weak.length===0?<span style={{color:C.green,fontSize:12}}>On track ✓</span>:st.weak.slice(0,2).map(function(item){return <div key={item.t} style={{fontSize:11,color:pctColor(item.pct)}}>{TOPIC_NAMES[item.t]||item.t} ({item.pct}%)</div>;})}</td>
                           {streakSettings&&streakSettings.active&&<td style={{padding:"10px 12px",textAlign:"center"}}><span style={{fontWeight:700,fontSize:14}}>{streakCount!==null?streakCount+"🔥":"—"}</span></td>}
-                          <td style={{padding:"10px 12px"}}><div style={{display:"flex",gap:6,flexWrap:"wrap"}}><Btn onClick={function(){setViewPupil(p.name);}} style={{padding:"4px 10px",fontSize:12}}>View</Btn><Btn onClick={function(){setResetTarget(p.name);setNewPw("");}} color="#fef3c7" textColor={C.yellow} style={{padding:"4px 10px",fontSize:12}}>Reset PW</Btn><Btn onClick={function(){clearProgress(p.name);}} color="#fee2e2" textColor={C.red} style={{padding:"4px 10px",fontSize:12}}>Clear</Btn></div></td>
+                          <td style={{padding:"10px 12px"}}><div style={{display:"flex",gap:6,flexWrap:"wrap"}}><Btn onClick={async function(){await onRefreshPupils();setViewPupil(p.name);}} style={{padding:"4px 10px",fontSize:12}}>View</Btn><Btn onClick={function(){setResetTarget(p.name);setNewPw("");}} color="#fef3c7" textColor={C.yellow} style={{padding:"4px 10px",fontSize:12}}>Reset PW</Btn><Btn onClick={function(){clearProgress(p.name);}} color="#fee2e2" textColor={C.red} style={{padding:"4px 10px",fontSize:12}}>Clear</Btn></div></td>
                         </tr>
                       );
                     })}
@@ -2822,6 +2822,7 @@ function AdminDashboard({admin,allUsers,onLogout}){
         <div style={{fontWeight:800,fontSize:18}}>Admin Dashboard</div>
         <div style={{display:"flex",alignItems:"center",gap:12}}>
           <span style={{fontSize:13,opacity:0.85}}>Logged in as {admin.name} {admin.surname}</span>
+          <button onClick={async function(){await onRefreshPupils();}} style={{background:"rgba(255,255,255,0.18)",border:"none",color:"#fff",padding:"6px 14px",borderRadius:6,cursor:"pointer",fontSize:13,marginRight:6}}>🔄 Refresh data</button>
           <button onClick={onLogout} style={{background:"rgba(255,255,255,0.18)",border:"none",color:"#fff",padding:"6px 14px",borderRadius:6,cursor:"pointer",fontSize:13}}>Log out</button>
         </div>
       </div>
@@ -3050,6 +3051,12 @@ function App(){
   const updatePupils=async function(np){
     setSession(function(s){return Object.assign({},s,{users:np});});
   };
+  const refreshPupils=async function(){
+    try{
+      const fresh=await sbGetPupils(session.user.id);
+      setSession(function(s){return Object.assign({},s,{users:fresh});});
+    }catch(e){console.error("Refresh failed:",e);}
+  };
 
   const saveAssignments=async function(a){setAssignments(a);await save("sats-assignments",a);};
   const saveStreakSettings=async function(s){setStreakSettings(s);await save("sats-streak-settings",s);};
@@ -3057,7 +3064,7 @@ function App(){
 
   if(!session)return <LoginScreen onLogin={handleLogin}/>;
   if(session.role==="pupil")return <PupilDashboard user={session.user} onUpdate={updateUser} onLogout={handleLogout} assignments={assignments} streakSettings={streakSettings}/>;
-  if(session.role==="teacher")return <TeacherDashboard teacher={session.user} pupils={session.users.filter(function(u){return u.role!=="teacher"&&u.role!=="admin";})} onUpdatePupils={updatePupils} onLogout={handleLogout} assignments={assignments} onSaveAssignments={saveAssignments} streakSettings={streakSettings} onSaveStreakSettings={saveStreakSettings} notes={notes} onSaveNotes={saveNotes}/>;
+  if(session.role==="teacher")return <TeacherDashboard teacher={session.user} pupils={session.users.filter(function(u){return u.role!=="teacher"&&u.role!=="admin";})} onRefreshPupils={refreshPupils} onUpdatePupils={updatePupils} onLogout={handleLogout} assignments={assignments} onSaveAssignments={saveAssignments} streakSettings={streakSettings} onSaveStreakSettings={saveStreakSettings} notes={notes} onSaveNotes={saveNotes}/>;
   if(session.role==="admin")return <AdminDashboard admin={session.user} allUsers={session.users} onLogout={handleLogout}/>;
   return null;
 }
