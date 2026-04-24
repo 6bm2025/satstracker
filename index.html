@@ -2333,6 +2333,7 @@ function TeacherDashboard({teacher,pupils,onUpdatePupils,onRefreshPupils,onLogou
         <div><div style={{fontWeight:900,fontSize:20}}>Teacher Dashboard</div><div style={{fontSize:13,opacity:0.85}}>{teacher.name} — {pupils.length} pupil{pupils.length!==1?"s":""}</div></div>
         <div style={{display:"flex",gap:8}}>
           <Btn onClick={exportCSV} color="rgba(255,255,255,0.2)" textColor="#fff" style={{fontSize:13,padding:"6px 14px"}} disabled={pupils.length===0}>Export CSV</Btn>
+          <Btn onClick={async function(){await onRefreshPupils();}} color="rgba(255,255,255,0.2)" textColor="#fff" style={{fontSize:13,padding:"6px 14px"}}>🔄 Refresh</Btn>
           <Btn onClick={onLogout} color="rgba(255,255,255,0.15)" textColor="#fff" style={{fontSize:13,padding:"6px 14px"}}>Log out</Btn>
         </div>
       </div>
@@ -2822,7 +2823,6 @@ function AdminDashboard({admin,allUsers,onLogout}){
         <div style={{fontWeight:800,fontSize:18}}>Admin Dashboard</div>
         <div style={{display:"flex",alignItems:"center",gap:12}}>
           <span style={{fontSize:13,opacity:0.85}}>Logged in as {admin.name} {admin.surname}</span>
-          <button onClick={async function(){await onRefreshPupils();}} style={{background:"rgba(255,255,255,0.18)",border:"none",color:"#fff",padding:"6px 14px",borderRadius:6,cursor:"pointer",fontSize:13,marginRight:6}}>🔄 Refresh data</button>
           <button onClick={onLogout} style={{background:"rgba(255,255,255,0.18)",border:"none",color:"#fff",padding:"6px 14px",borderRadius:6,cursor:"pointer",fontSize:13}}>Log out</button>
         </div>
       </div>
