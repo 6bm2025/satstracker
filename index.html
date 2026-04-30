@@ -44,8 +44,28 @@ async function sbGetPupils(teacherId){
 }
 async function sbLoginPupil(id,password){const{data,error}=await sb.from("users").select("*").eq("id",id).single();if(error||!data)return null;if(data.password!==password)return null;return data;}
 async function sbLoginTeacher(username,password){const{data,error}=await sb.from("users").select("*").eq("username",username).in("role",["teacher","admin"]).single();if(error||!data)return null;if(data.password!==password)return null;return data;}
-async function sbGetScores(userId){const{data,error}=await sb.from("scores").select("*").eq("user_id",userId);if(error)return{};const p={};(data||[]).forEach(function(r){p[r.topic]={attempts:r.results,lastPractised:r.last_practised};});return p;}
-async function sbSaveScores(userId,topicProgress){const rows=Object.keys(topicProgress).map(function(topic){const t=topicProgress[topic];return{user_id:userId,topic,results:t.attempts||[],last_practised:t.lastPractised||new Date().toISOString(),updated_at:new Date().toISOString()};});if(!rows.length)return;await sb.from("scores").upsert(rows,{onConflict:"user_id,topic"});}
+async function sbGetScores(userId){
+  const{data,error}=await sb.from("scores").select("*").eq("user_id",userId);
+  if(error){console.error("sbGetScores error:",error.message);return{};}
+  const p={};
+  (data||[]).forEach(function(r){
+    p[r.topic]={
+      attempts:Array.isArray(r.results)?r.results:[],
+      lastPractised:r.last_practised||null
+    };
+  });
+  return p;
+}
+async function sbSaveScores(userId,topicProgress){
+  const rows=Object.keys(topicProgress).map(function(topic){
+    const t=topicProgress[topic];
+    const attempts=(t.attempts||[]).slice(-100); // cap at last 100 to prevent row size issues
+    return{user_id:userId,topic,results:attempts,last_practised:t.lastPractised||new Date().toISOString(),updated_at:new Date().toISOString()};
+  });
+  if(!rows.length)return null;
+  const{error}=await sb.from("scores").upsert(rows,{onConflict:"user_id,topic"});
+  return error||null;
+}
 async function sbSavePupil(teacherId,className,pupil){const parts=(pupil.name||"").trim().split(" ");const surname=parts.length>1?parts.pop():"";const firstName=parts.join(" ")||surname;const rec={name:firstName,surname,role:"pupil",password:pupil.password||genDefaultPwd(),teacher_id:teacherId,class_name:className||""};if(pupil.id){await sb.from("users").update(rec).eq("id",pupil.id);}else{await sb.from("users").insert(rec);}}
 async function sbDeletePupil(id){await sb.from("users").delete().eq("id",id);}
 async function sbCreateTeacher(name,surname,username,password,className){await sb.from("users").insert({name,surname,role:"teacher",username,password,class_name:className||""});}
@@ -2172,6 +2192,18 @@ function TeacherDashboard({teacher,pupils,onUpdatePupils,onRefreshPupils,onLogou
   // Alert threshold
   const[alertDays,setAlertDays]=useState(5);
 
+  const deletePaperForPupil=async function(p,paperIndex){
+    const newPapers=(p.fullPapers||[]).filter(function(_,i){return i!==paperIndex;});
+    const updated=Object.assign({},p,{fullPapers:newPapers});
+    // Update React state immediately
+    onUpdatePupils(pupils.map(function(pu){return pu.id===p.id?updated:pu;}));
+    // Save to Supabase
+    const meta={sessions:updated.sessions||0,lastLogin:updated.lastLogin||null,practiseDates:updated.practiseDates||[],fullPapers:newPapers.map(function(x){return{score:x.score,marks:x.marks,date:x.date};})};
+    const{error}=await sb.from("users").update({metadata:meta}).eq("id",p.id);
+    if(error){console.error("Delete paper failed:",error.message);alert("Error saving deletion — please try again.");}
+    else{console.log("Paper deleted from Supabase for",p.name,"remaining:",newPapers.length);}
+    return!error;
+  };
   const getPupilStats=function(p){
     const allA=Object.values(p.topicProgress||{}).flatMap(function(d){return d.attempts||[];});
     const overall=allA.length?Math.round(allA.reduce(function(s,v){return s+v;},0)/allA.length*100):null;
@@ -2201,7 +2233,20 @@ function TeacherDashboard({teacher,pupils,onUpdatePupils,onRefreshPupils,onLogou
   const SortBtn=function(props){const active=sortCol===props.col&&!weakSort;return(<th onClick={function(){handleColSort(props.col);}} style={{padding:"10px 12px",textAlign:"left",fontWeight:800,color:active?C.primaryD:C.primary,whiteSpace:"nowrap",cursor:"pointer",userSelect:"none",background:active?C.primaryL:"transparent"}}>{props.label} {active?(sortDir==="asc"?"▲":"▼"):"⇅"}</th>);};
 
   const doReset=function(){onUpdatePupils(pupils.map(function(p){return p.name===resetTarget?Object.assign({},p,{password:newPw}):p;}));setResetTarget(null);setNewPw("");};
-  const clearProgress=function(name){if(!window.confirm("Clear all progress for "+name+"?"))return;onUpdatePupils(pupils.map(function(p){return p.name===name?Object.assign({},p,{topicProgress:{},fullPapers:[],sessions:0,practiseDates:[]}):p;}));};
+  const clearProgress=async function(name){
+    if(!window.confirm("Clear all progress for "+name+"?"))return;
+    const pupil=pupils.find(function(p){return p.name===name;});
+    if(!pupil)return;
+    // Delete from Supabase scores table
+    const{error:scErr}=await sb.from("scores").delete().eq("user_id",pupil.id);
+    if(scErr)console.error("Clear scores error:",scErr.message);
+    // Clear metadata (fullPapers, sessions etc)
+    const{error:metErr}=await sb.from("users").update({metadata:{sessions:0,lastLogin:pupil.lastLogin||null,practiseDates:[],fullPapers:[]}}).eq("id",pupil.id);
+    if(metErr)console.error("Clear metadata error:",metErr.message);
+    // Update React state
+    onUpdatePupils(pupils.map(function(p){return p.name===name?Object.assign({},p,{topicProgress:{},fullPapers:[],sessions:0,practiseDates:[]}):p;}));
+    console.log("Cleared all progress for",name);
+  };
 
   const exportCSV=function(){
     const rows=[["Name","Sessions","Last Login","Overall %","Last 3 Papers","Weak Areas","Streak Days"]];
@@ -2290,13 +2335,9 @@ function TeacherDashboard({teacher,pupils,onUpdatePupils,onRefreshPupils,onLogou
                       <div key={fi} style={{display:"flex",alignItems:"center",gap:4,background:C.primaryL,borderRadius:8,padding:"4px 8px",border:"1px solid "+C.primary}}>
                         <span style={{fontSize:12,fontWeight:700}}>{fp.score}/40</span>
                         <span style={{fontSize:11,color:C.textL}}>({fp.date})</span>
-                        <button onClick={function(){
+                        <button onClick={async function(){
                           if(!window.confirm("Delete this paper result ("+fp.score+"/40 on "+fp.date+")? This cannot be undone."))return;
-                          const newPapers=(p.fullPapers||[]).filter(function(_,i){return i!==fi;});
-                          const updated=Object.assign({},p,{fullPapers:newPapers});
-                          onUpdatePupils(pupils.map(function(pu){return pu.id===p.id?updated:pu;}));
-                          const meta={sessions:updated.sessions||0,lastLogin:updated.lastLogin||null,practiseDates:updated.practiseDates||[],fullPapers:newPapers.map(function(x){return{score:x.score,marks:x.marks,date:x.date};})};
-                          sb.from("users").update({metadata:meta}).eq("id",p.id).catch(function(e){console.error(e);});
+                          await deletePaperForPupil(p,fi);
                         }} style={{background:"none",border:"none",cursor:"pointer",fontSize:13,color:C.red,padding:"0 2px",lineHeight:1}}>🗑</button>
                       </div>
                     );})}
@@ -2402,14 +2443,10 @@ function TeacherDashboard({teacher,pupils,onUpdatePupils,onRefreshPupils,onLogou
                               const globalIdx=(p.fullPapers||[]).length-st.last3.length+j;
                               return <span key={j} style={{display:"flex",alignItems:"center",gap:2,background:C.primaryL,borderRadius:6,padding:"2px 6px",fontWeight:700,fontSize:12}}>
                                 {fp.score}/40
-                                <button onClick={function(e){
+                                <button onClick={async function(e){
                                   e.stopPropagation();
                                   if(!window.confirm("Delete "+fp.score+"/40 ("+fp.date+") for "+p.name+"?"))return;
-                                  const newPapers=(p.fullPapers||[]).filter(function(_,i){return i!==globalIdx;});
-                                  const updated=Object.assign({},p,{fullPapers:newPapers});
-                                  onUpdatePupils(pupils.map(function(pu){return pu.id===p.id?updated:pu;}));
-                                  const meta={sessions:updated.sessions||0,lastLogin:updated.lastLogin||null,practiseDates:updated.practiseDates||[],fullPapers:newPapers.map(function(x){return{score:x.score,marks:x.marks,date:x.date};})};
-                                  sb.from("users").update({metadata:meta}).eq("id",p.id).catch(function(e){console.error(e);});
+                                  await deletePaperForPupil(p,globalIdx);
                                 }} style={{background:"none",border:"none",cursor:"pointer",color:C.red,fontSize:11,padding:"0",lineHeight:1,marginLeft:2}}>🗑</button>
                               </span>;
                             })}</div>}</td>
@@ -3044,11 +3081,22 @@ function App(){
 
   const updateUser=async function(updated,completedAssignment){
     if(updated.id&&updated.topicProgress){
-      sbSaveScores(updated.id,updated.topicProgress).catch(function(e){console.error("Score save:",e);});
-      const meta={sessions:updated.sessions||0,lastLogin:updated.lastLogin||null,practiseDates:updated.practiseDates||[],fullPapers:(updated.fullPapers||[]).map(function(fp){return{score:fp.score,marks:fp.marks,date:fp.date};})};
-      const{data:metaData,error:metaErr}=await sb.from("users").update({metadata:meta}).eq("id",updated.id).select();
+      const scoreErr=await sbSaveScores(updated.id,updated.topicProgress);
+      if(scoreErr)console.error("Score save failed:",scoreErr.message,scoreErr);
+      // Fetch current fullPapers from Supabase so we don't overwrite teacher deletions
+      const{data:currentMeta}=await sb.from("users").select("metadata").eq("id",updated.id).single();
+      const existingPapers=(currentMeta&&currentMeta.metadata&&currentMeta.metadata.fullPapers)||[];
+      // Merge: use existing papers from Supabase, only add papers that aren't already there
+      const sessionPapers=(updated.fullPapers||[]).map(function(fp){return{score:fp.score,marks:fp.marks,date:fp.date};});
+      const mergedPapers=existingPapers.slice();
+      sessionPapers.forEach(function(sp){
+        const alreadyExists=mergedPapers.some(function(ep){return ep.date===sp.date&&ep.score===sp.score;});
+        if(!alreadyExists)mergedPapers.push(sp);
+      });
+      const meta={sessions:updated.sessions||0,lastLogin:updated.lastLogin||null,practiseDates:updated.practiseDates||[],fullPapers:mergedPapers};
+      const{error:metaErr}=await sb.from("users").update({metadata:meta}).eq("id",updated.id);
       if(metaErr){console.error("Metadata save error:",metaErr.message,metaErr);}
-      else{console.log("Metadata saved OK for",updated.id,"papers:",meta.fullPapers.length);}
+      else{console.log("Metadata saved OK for",updated.id,"papers:",mergedPapers.length);}
     }
     const nu=session.users.map(function(u){return u.id===updated.id?updated:u;});
     let newAssignments=assignments;
