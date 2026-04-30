@@ -2401,7 +2401,7 @@ function TeacherDashboard({teacher,pupils,onUpdatePupils,onRefreshPupils,onLogou
                           <td style={{padding:"10px 12px"}}>{st.last3.length===0?<span style={{color:C.textL,fontSize:12}}>None yet</span>:<div style={{display:"flex",gap:4,flexWrap:"wrap"}}>{st.last3.map(function(fp,j){return <span key={j} style={{background:C.primaryL,borderRadius:6,padding:"2px 8px",fontWeight:700,fontSize:12}}>{fp.score}/40</span>;})}</div>}</td>
                           <td style={{padding:"10px 12px"}}>{st.weak.length===0?<span style={{color:C.green,fontSize:12}}>On track ✓</span>:st.weak.slice(0,2).map(function(item){return <div key={item.t} style={{fontSize:11,color:pctColor(item.pct)}}>{TOPIC_NAMES[item.t]||item.t} ({item.pct}%)</div>;})}</td>
                           {streakSettings&&streakSettings.active&&<td style={{padding:"10px 12px",textAlign:"center"}}><span style={{fontWeight:700,fontSize:14}}>{streakCount!==null?streakCount+"🔥":"—"}</span></td>}
-                          <td style={{padding:"10px 12px"}}><div style={{display:"flex",gap:6,flexWrap:"wrap"}}><Btn onClick={async function(){await onRefreshPupils();setViewPupil(p.name);}} style={{padding:"4px 10px",fontSize:12}}>View</Btn><Btn onClick={function(){setResetTarget(p.name);setNewPw("");}} color="#fef3c7" textColor={C.yellow} style={{padding:"4px 10px",fontSize:12}}>Reset PW</Btn><Btn onClick={function(){clearProgress(p.name);}} color="#fee2e2" textColor={C.red} style={{padding:"4px 10px",fontSize:12}}>Clear</Btn></div></td>
+                          <td style={{padding:"10px 12px"}}><div style={{display:"flex",gap:6,flexWrap:"wrap"}}><Btn onClick={function(){setViewPupil(p.name);}} style={{padding:"4px 10px",fontSize:12}}>View</Btn><Btn onClick={function(){setResetTarget(p.name);setNewPw("");}} color="#fef3c7" textColor={C.yellow} style={{padding:"4px 10px",fontSize:12}}>Reset PW</Btn><Btn onClick={function(){clearProgress(p.name);}} color="#fee2e2" textColor={C.red} style={{padding:"4px 10px",fontSize:12}}>Clear</Btn></div></td>
                         </tr>
                       );
                     })}
@@ -3032,8 +3032,9 @@ function App(){
     if(updated.id&&updated.topicProgress){
       sbSaveScores(updated.id,updated.topicProgress).catch(function(e){console.error("Score save:",e);});
       const meta={sessions:updated.sessions||0,lastLogin:updated.lastLogin||null,practiseDates:updated.practiseDates||[],fullPapers:(updated.fullPapers||[]).map(function(fp){return{score:fp.score,marks:fp.marks,date:fp.date};})};
-      const{error:metaErr}=await sb.from("users").update({metadata:meta}).eq("id",updated.id);
-      if(metaErr)console.error("Metadata save error:",metaErr.message,metaErr);
+      const{data:metaData,error:metaErr}=await sb.from("users").update({metadata:meta}).eq("id",updated.id).select();
+      if(metaErr){console.error("Metadata save error:",metaErr.message,metaErr);}
+      else{console.log("Metadata saved OK for",updated.id,"papers:",meta.fullPapers.length);}
     }
     const nu=session.users.map(function(u){return u.id===updated.id?updated:u;});
     let newAssignments=assignments;
