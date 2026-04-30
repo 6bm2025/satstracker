@@ -2025,6 +2025,8 @@ function ResultsScreen({results,mode,onBack,onReviewAll,onReviewOne}){
 
 // ── Pupil Dashboard ───────────────────────────────────────────────────────────
 function PupilDashboard({user,onUpdate,onLogout,assignments,streakSettings}){
+  const userRef=useRef(user);
+  useEffect(function(){userRef.current=user;},[user]);
   const[view,setView]=useState("dashboard");const[mode,setMode]=useState(null);const[questions,setQuestions]=useState([]);const[results,setResults]=useState([]);const[reviewMistakes,setReviewMistakes]=useState([]);const[pastPaperIdx,setPastPaperIdx]=useState(null);const[activeAssignment,setActiveAssignment]=useState(null);
 
   // My assignments (those targeting this pupil)
@@ -2055,11 +2057,12 @@ function PupilDashboard({user,onUpdate,onLogout,assignments,streakSettings}){
   const handleComplete=function(res){
     setResults(res);
     const today=isoToday();
-    const updated=Object.assign({},user,{
-      topicProgress:Object.assign({},user.topicProgress),
-      fullPapers:(user.fullPapers||[]).slice(),
-      sessions:(user.sessions||0)+1,
-      practiseDates:Array.from(new Set((user.practiseDates||[]).concat([today])))
+    const currentUser=userRef.current; // always use latest user, not stale closure
+    const updated=Object.assign({},currentUser,{
+      topicProgress:Object.assign({},currentUser.topicProgress),
+      fullPapers:(currentUser.fullPapers||[]).slice(),
+      sessions:(currentUser.sessions||0)+1,
+      practiseDates:Array.from(new Set((currentUser.practiseDates||[]).concat([today])))
     });
     res.forEach(function(r){
       if(!updated.topicProgress[r.topic])updated.topicProgress[r.topic]={attempts:[]};
