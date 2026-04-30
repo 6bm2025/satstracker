@@ -2398,7 +2398,21 @@ function TeacherDashboard({teacher,pupils,onUpdatePupils,onRefreshPupils,onLogou
                           <td style={{padding:"10px 12px"}}><span style={{color:inactive?C.red:C.text,fontWeight:inactive?700:400}}>{lastLoginLabel(p.lastLogin)}</span></td>
                           <td style={{padding:"10px 12px"}}>{st.overall!==null?<span style={{fontWeight:700,color:pctColor(st.overall)}}>{st.overall}%</span>:<span style={{color:C.textL}}>—</span>}</td>
                           <td style={{padding:"10px 12px"}}><MasteryBadge pct={st.overall}/></td>
-                          <td style={{padding:"10px 12px"}}>{st.last3.length===0?<span style={{color:C.textL,fontSize:12}}>None yet</span>:<div style={{display:"flex",gap:4,flexWrap:"wrap"}}>{st.last3.map(function(fp,j){return <span key={j} style={{background:C.primaryL,borderRadius:6,padding:"2px 8px",fontWeight:700,fontSize:12}}>{fp.score}/40</span>;})}</div>}</td>
+                          <td style={{padding:"10px 12px"}}>{st.last3.length===0?<span style={{color:C.textL,fontSize:12}}>None yet</span>:<div style={{display:"flex",gap:4,flexWrap:"wrap"}}>{st.last3.map(function(fp,j){
+                              const globalIdx=(p.fullPapers||[]).length-st.last3.length+j;
+                              return <span key={j} style={{display:"flex",alignItems:"center",gap:2,background:C.primaryL,borderRadius:6,padding:"2px 6px",fontWeight:700,fontSize:12}}>
+                                {fp.score}/40
+                                <button onClick={function(e){
+                                  e.stopPropagation();
+                                  if(!window.confirm("Delete "+fp.score+"/40 ("+fp.date+") for "+p.name+"?"))return;
+                                  const newPapers=(p.fullPapers||[]).filter(function(_,i){return i!==globalIdx;});
+                                  const updated=Object.assign({},p,{fullPapers:newPapers});
+                                  onUpdatePupils(pupils.map(function(pu){return pu.id===p.id?updated:pu;}));
+                                  const meta={sessions:updated.sessions||0,lastLogin:updated.lastLogin||null,practiseDates:updated.practiseDates||[],fullPapers:newPapers.map(function(x){return{score:x.score,marks:x.marks,date:x.date};})};
+                                  sb.from("users").update({metadata:meta}).eq("id",p.id).catch(function(e){console.error(e);});
+                                }} style={{background:"none",border:"none",cursor:"pointer",color:C.red,fontSize:11,padding:"0",lineHeight:1,marginLeft:2}}>🗑</button>
+                              </span>;
+                            })}</div>}</td>
                           <td style={{padding:"10px 12px"}}>{st.weak.length===0?<span style={{color:C.green,fontSize:12}}>On track ✓</span>:st.weak.slice(0,2).map(function(item){return <div key={item.t} style={{fontSize:11,color:pctColor(item.pct)}}>{TOPIC_NAMES[item.t]||item.t} ({item.pct}%)</div>;})}</td>
                           {streakSettings&&streakSettings.active&&<td style={{padding:"10px 12px",textAlign:"center"}}><span style={{fontWeight:700,fontSize:14}}>{streakCount!==null?streakCount+"🔥":"—"}</span></td>}
                           <td style={{padding:"10px 12px"}}><div style={{display:"flex",gap:6,flexWrap:"wrap"}}><Btn onClick={function(){setViewPupil(p.name);}} style={{padding:"4px 10px",fontSize:12}}>View</Btn><Btn onClick={function(){setResetTarget(p.name);setNewPw("");}} color="#fef3c7" textColor={C.yellow} style={{padding:"4px 10px",fontSize:12}}>Reset PW</Btn><Btn onClick={function(){clearProgress(p.name);}} color="#fee2e2" textColor={C.red} style={{padding:"4px 10px",fontSize:12}}>Clear</Btn></div></td>
