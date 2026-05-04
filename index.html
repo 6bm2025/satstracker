@@ -170,11 +170,31 @@ function answersMatch(ua,ca,isText){
   const u=ua.trim().replace(/,/g,"");const c=String(ca).trim().replace(/,/g,"");
   if(u.replace(/\s/g,"")=== c.replace(/\s/g,""))return true;
   if(isText&&fractionsEqual(u,c))return true;
-  if(!isNaN(parseFloat(u))&&!isNaN(parseFloat(c))&&Math.abs(parseFloat(u)-parseFloat(c))<0.001)return true;
+  // Check if answer is a remainder string - also accept decimal equivalent
+  const remMatch=c.match(/^(\d+)\s+remainder\s+(\d+)$/i);
+  if(remMatch){
+    const whole=parseInt(remMatch[1]),rem=parseInt(remMatch[2]);
+    // Find divisor from context - we can back-calculate: dividend = whole*div+rem
+    // Just check if user entered the decimal equivalent
+    // We need the divisor - find it from the dividend if possible
+    // Accept decimal form: e.g. 74.5 for "74 remainder 1" when divisor is 2
+    // We can't easily get divisor here, so accept if parseFloat matches any valid decimal
+    // Actually check all the hint data - for now accept if the whole number part matches
+    // and the decimal is a valid fraction of something sensible (1-9)
+    for(let div=2;div<=9;div++){
+      const decimal=whole+rem/div;
+      if(!isNaN(parseFloat(u))&&Math.abs(parseFloat(u)-decimal)<0.001)return true;
+    }
+    return false;
+  }
+  // Only use parseFloat comparison if BOTH sides look like clean decimal numbers
+  // (not fractions like "3/16" which parseFloat parses as just "3")
+  const isCleanNum=function(s){return s!==""&&!isNaN(Number(s))&&!/\//.test(s)&&!/[;,a-zA-Z]/.test(s);};
+  if(isCleanNum(u)&&isCleanNum(c)&&Math.abs(parseFloat(u)-parseFloat(c))<0.001)return true;
   const uDec=fracToDecimal(u);
-  if(uDec!==null&&!isNaN(parseFloat(c))&&Math.abs(uDec-parseFloat(c))<0.001)return true;
+  if(uDec!==null&&isCleanNum(c)&&Math.abs(uDec-parseFloat(c))<0.001)return true;
   const cDec=fracToDecimal(c);
-  if(cDec!==null&&!isNaN(parseFloat(u))&&Math.abs(cDec-parseFloat(u))<0.001)return true;
+  if(cDec!==null&&isCleanNum(u)&&Math.abs(cDec-parseFloat(u))<0.001)return true;
   return false;
 }
 
@@ -316,7 +336,7 @@ function genQ(topic,usedKeys){
           const dv=Math.random()<0.5?pick(PRIMES):pick(COMPOSITES),a=rnd(100,999),n=dv*a;
           const working=n.toLocaleString()+" ÷ "+dv+":\nEstimate multiples of "+dv+"\nAnswer = "+a;
           q={question:n.toLocaleString()+" ÷ "+dv,answer:a,leftBox:false,topic:"long-division",isTwoMark:true,working,divHint:{dividend:n,divisor:dv},dynamicHint:working,keyNum:n};break;}
-        case"division-remainder":{const dv=rnd(2,9),a=rnd(10,99),r=rnd(1,dv-1),n=dv*a+r;const ansStr=a+" remainder "+r;q={question:n+" ÷ "+dv+" =",answer:ansStr,leftBox:false,topic,isText:true,keyNum:n,divHint:{dividend:n,divisor:dv},dynamicHint:n+" ÷ "+dv+" = "+a+" remainder "+r};break;}
+        case"division-remainder":{const dv=rnd(2,9),a=rnd(10,99),r=rnd(1,dv-1),n=dv*a+r;const ansStr=a+" remainder "+r;const decAns=parseFloat((n/dv).toFixed(4));q={question:n+" ÷ "+dv+" =",answer:ansStr,leftBox:false,topic,isText:true,keyNum:n,divHint:{dividend:n,divisor:dv},dynamicHint:n+" ÷ "+dv+" = "+a+" remainder "+r+" (or "+decAns+" as a decimal)"};break;}
         case"fractions-add":{
           const d1=pick([3,4,5,6,8,10,12]),opts=[3,4,5,6,8,10,12].filter(x=>x!==d1),d2=pick(opts),n1=rnd(1,d1-1),n2=rnd(1,d2-1);
           const lcd=d1*d2/gcd(d1,d2),m1=lcd/d1,m2=lcd/d2,nt=n1*m1+n2*m2;
