@@ -79,7 +79,7 @@ async function sbSavePaper(userId,paper){
     marks:paper.marks||40,
     date:paper.date,
     results:(paper.results||[]).map(function(r){
-      return{topic:r.topic,correct:r.correct?1:0,marks:r.marks||0,question:r.question||"",userAnswer:r.userAnswer||""};
+      return{topic:r.topic,correct:r.correct?1:0,marks:r.marks||0,question:r.question||"",answer:String(r.answer||""),userAnswer:r.userAnswer||""};
     })
   };
   const{error}=await sb.from("papers").insert(row);
@@ -167,7 +167,9 @@ function fracToDecimal(s){
   return null;
 }
 function answersMatch(ua,ca,isText){
-  const u=ua.trim().replace(/,/g,"");const c=String(ca).trim().replace(/,/g,"");
+  // Strip leading non-numeric characters (e.g. "o8447" → "8447")
+  const stripLeading=function(s){return s.replace(/^[^0-9\.\-\/]+/,"");};
+  const u=stripLeading(ua.trim()).replace(/,/g,"");const c=String(ca).trim().replace(/,/g,"");
   if(u.replace(/\s/g,"")=== c.replace(/\s/g,""))return true;
   if(isText&&fractionsEqual(u,c))return true;
   // Check if answer is a remainder string - also accept decimal equivalent
@@ -388,12 +390,26 @@ function genQ(topic,usedKeys){
             d1=pick([3,4,5,6]);const d2opts=[3,4,5,6].filter(function(x){return x!==d1&&d1%x!==0&&x%d1!==0;});
             d2=d2opts.length?pick(d2opts):pick([3,4,5,6].filter(function(x){return x!==d1;}));
             const lcd=d1*d2/gcd(d1,d2),m1=lcd/d1,m2=lcd/d2;
-            n1=rnd(2,d1-1);n2=rnd(1,d2-1);
-            const en1=n1*m1,en2=n2*m2;
-            let rn=en1-en2;if(rn<=0){n1=d1-1;const en1b=n1*m1;rn=en1b-en2;if(rn<=0)rn=1;}
-            const s2=simplify(Math.abs(rn),lcd);ans=s2[0]+"/"+s2[1];
-            dh=n1+"/"+d1+" - "+n2+"/"+d2+"\nCommon denom = "+lcd+"\n= "+en1+"/"+lcd+" - "+en2+"/"+lcd+" = "+rn+"/"+lcd+(s2[0]!==rn||s2[1]!==lcd?" = "+ans:"");
-            fracH={n1,d1,n2,d2};
+            // Pick n2 first, then ensure n1/d1 > n2/d2 by requiring n1*m1 > n2*m2
+            n2=rnd(1,d2-1);
+            const en2=n2*m2;
+            // min n1 such that n1*m1 > en2
+            const minN1=Math.floor(en2/m1)+1;
+            if(minN1>d1-1){
+              // fallback: swap so d2 becomes d1 side (just use same-denom with d=lcd)
+              n1=rnd(2,lcd-1);n2=rnd(1,n1-1);
+              d1=lcd;d2=lcd;
+              const sf=simplify(n1-n2,lcd);ans=sf[0]+"/"+sf[1];
+              dh=n1+"/"+lcd+" - "+n2+"/"+lcd+" = "+(n1-n2)+"/"+lcd+(sf[0]!==n1-n2||sf[1]!==lcd?" = "+ans:"");
+              fracH={n1,d1:lcd,n2,d2:lcd};
+            } else {
+              n1=rnd(minN1,d1-1);
+              const en1=n1*m1;
+              const rn=en1-en2; // guaranteed positive
+              const s2=simplify(rn,lcd);ans=s2[0]+"/"+s2[1];
+              dh=n1+"/"+d1+" - "+n2+"/"+d2+"\nCommon denom = "+lcd+"\n= "+en1+"/"+lcd+" - "+en2+"/"+lcd+" = "+rn+"/"+lcd+(s2[0]!==rn||s2[1]!==lcd?" = "+ans:"");
+              fracH={n1,d1,n2,d2};
+            }
           }
           q={question:n1+"/"+d1+" - "+n2+"/"+d2+" =",answer:ans,leftBox:false,topic,isText:true,keyNum:d1*10+n1,dynamicHint:dh,fracSubHint:fracH};break;}
         case"fractions-subtract-mixed":{
@@ -1820,6 +1836,10 @@ function PracticeSession({mode,questions,onComplete,onExit}){
   useEffect(function(){if(done&&finalResults)onComplete(finalResults);},[done,finalResults]);
 
   const submitFullPaper=function(){
+    const answeredCount=Object.keys(answers).length;
+    if(answeredCount===0){
+      if(!window.confirm("Warning: no answers have been recorded. This may be a technical issue. Submit anyway (you will get 0/40) or cancel and re-enter your answers?"))return;
+    }
     const allRes=questions.map(function(qq,i){
       if(answers[i]){
         const saved=answers[i];
@@ -1828,6 +1848,7 @@ function PracticeSession({mode,questions,onComplete,onExit}){
       }
       return Object.assign({},qq,{userAnswer:"",correct:false,marks:0});
     });
+    console.log("Paper submitted: answered",answeredCount,"of",questions.length,"questions");
     setFinalResults(allRes);setDone(true);
   };
 
@@ -1836,7 +1857,10 @@ function PracticeSession({mode,questions,onComplete,onExit}){
     const trimmed=ua.trim().replace(/,/g,"");
     const ok=trimmed!==""&&answersMatch(trimmed,q.answer,q.isText);
     const isTM=TWO_MARK.has(q.topic);const marks=ok?(isTM?2:1):0;
-    setAnswers(function(prev){return Object.assign({},prev,{[idx]:{userAnswer:ua,correct:ok,marks:marks}});});
+    setAnswers(function(prev){
+      const updated=Object.assign({},prev,{[idx]:{userAnswer:ua,correct:ok,marks:marks}});
+      return updated;
+    });
   };
 
   const submitAns=function(){
@@ -2120,9 +2144,14 @@ function PupilDashboard({user,onUpdate,onLogout,assignments,streakSettings}){
       const tm=Math.min(40,res.reduce(function(s,r){return s+(r.marks||0);},0));
       const newPaper={score:tm,marks:40,date:todayStr(),results:res};
       updated.fullPapers=updated.fullPapers.concat([newPaper]);
-      // Save to dedicated papers table (async, non-blocking)
+      // Save to dedicated papers table
       sbSavePaper(currentUser.id,newPaper).then(function(err){
-        if(!err)console.log("Paper saved to papers table, score:",tm);
+        if(!err){console.log("Paper saved to papers table, score:",tm);}
+        else{console.error("Paper save FAILED:",err.message||err);
+          // Fallback: store in metadata so data isn't lost
+          const fallbackMeta={sessions:updated.sessions||0,lastLogin:updated.lastLogin||null,practiseDates:updated.practiseDates||[],fallbackPapers:(updated.fullPapers||[]).map(function(fp){return{score:fp.score,marks:fp.marks,date:fp.date};})};
+          sb.from("users").update({metadata:fallbackMeta}).eq("id",currentUser.id).catch(function(e){console.error("Fallback save also failed:",e);});
+        }
       });
     }
     onUpdate(updated,activeAssignment);
