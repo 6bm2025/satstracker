@@ -10,17 +10,24 @@
 <script
   src="https://js-de.sentry-cdn.com/4f8972632847202a3475e38de7542c84.min.js"
   crossorigin="anonymous"
+  async
 ></script>
 <script>
-  Sentry.init({
-    dsn: "https://4f8972632847202a3475e38de7542c84@o4511490095841280.ingest.de.sentry.io/4511490105213008",
-    environment: "production",
-    release: "sats-tracker-v8",
-    tracesSampleRate: 0.2,
-    beforeSend: function(event) {
-      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') return null;
-      return event;
-    }
+  window.addEventListener('load', function() {
+    try {
+      if (typeof Sentry !== 'undefined') {
+        Sentry.init({
+          dsn: "https://4f8972632847202a3475e38de7542c84@o4511490095841280.ingest.de.sentry.io/4511490105213008",
+          environment: "production",
+          release: "sats-tracker-v8",
+          tracesSampleRate: 0.2,
+          beforeSend: function(event) {
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') return null;
+            return event;
+          }
+        });
+      }
+    } catch(e) { console.warn('Sentry failed to initialise:', e); }
   });
 </script>
 <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
